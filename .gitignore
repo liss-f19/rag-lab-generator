@@ -8,3 +8,4 @@ htmlcov/
 .ruff_cache/
 .idea/
 .DS_Store
+.env
