@@ -1,0 +1,31 @@
+repos:
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.31
+    hooks:
+      - id: uv-lock
+
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        pass_filenames: false
+
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        pass_filenames: false
+
+      - id: flake8
+        name: flake8
+        entry: uv run flake8 src tests
+        language: system
+        pass_filenames: false
+
+      - id: pylint
+        name: pylint
+        entry: uv run pylint src tests
+        language: system
+        pass_filenames: false
