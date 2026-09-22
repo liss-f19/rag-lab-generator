@@ -1,13 +1,38 @@
 [project]
 name = "rag-lab-generator"
 version = "0.1.0"
-description = "Add your description here"
+description = "RAG system and LangGraph agent for generating Operating Systems lab assignments"
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = []
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "anthropic>=1.0",
+    "langgraph>=1.0",
+    "langchain-core>=1.0",
+    "langchain-anthropic>=1.0",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "psycopg[binary]>=3.2",
+    "pgvector>=0.3",
+    "numpy>=1.26",
+    "python-frontmatter>=1.1",
+    "markdown-it-py>=3.0",
+    "lxml>=5.3",
+    "networkx>=3.4",
+    "httpx>=0.28",
+    "typer>=0.15",
+    "rich>=13.9",
+    "pyyaml>=6.0",
+    "fastapi>=0.141.1",
+    "sse-starlette>=3.4.11",
+]
+
+[project.optional-dependencies]
+embed-local = ["sentence-transformers>=3.3"]
+ingest = ["pymupdf>=1.25", "xhtml2pdf>=0.2.16", "markdown>=3.7"]
+serve = ["uvicorn>=0.30"]
 
 [project.scripts]
-rag-lab-generator = "rag_lab_generator:main"
+rag-lab = "rag_lab_generator.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
@@ -21,11 +46,62 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.3",
+    "mypy>=1.14",
+    "lxml-stubs>=0.5",
+    "types-PyYAML>=6.0",
+    "types-Markdown>=3.7",
+    "types-networkx>=3.4",
 ]
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: needs a running Postgres (docker compose up -d db)"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+mypy_path = "src"
+packages = ["rag_lab_generator"]
+ignore_missing_imports = true
+
 [tool.pylint.messages_control]
+# ruff + mypy --strict carry the style and typing rules of CLAUDE.md; pylint stays for the
+# checks they do not have. Disabled: docstring rules (the header docstring is the convention),
+# pytest fixture shadowing, the deliberate lazy imports of the CLI modules, size metrics that
+# typer commands and pydantic builders exceed by design, interface arguments left unused,
+# the broad excepts of the API translate() and fallback paths, the InjectedState sentinel of
+# the agent tools, and the stub-class / private-access / `== []` idioms of the tests.
 disable = [
     "missing-module-docstring",
     "missing-function-docstring",
     "missing-class-docstring",
+    "too-few-public-methods",
+    "import-error",
+    "redefined-outer-name",
+    "import-outside-toplevel",
+    "too-many-arguments",
+    "too-many-positional-arguments",
+    "too-many-locals",
+    "too-many-branches",
+    "too-many-statements",
+    "too-many-return-statements",
+    "unused-argument",
+    "broad-exception-caught",
+    "duplicate-code",
+    "dangerous-default-value",
+    "super-init-not-called",
+    "protected-access",
+    "use-implicit-booleaness-not-comparison",
 ]
+
+[tool.pylint.format]
+max-line-length = 100

@@ -1,0 +1,6 @@
+# Grading rules
+
+Source: https://sop.mini.pw.edu.pl/en/sop2/zasady/
+The rules are in [usos page describing the course](https://usosweb.usos.pw.edu.pl/kontroler.php?_action=katalog2/przedmioty/pokazPrzedmiot&prz_kod=1120-IN000-ISA-0244)  after logging in.
+
+See the "Item regulations" field.

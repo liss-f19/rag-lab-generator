@@ -1,0 +1,331 @@
+# Gold query set for retrieval evaluation.
+# Written by hand from data/raw/<course>/<lab>/lab.xml (titles, section ids, example tasks) and
+# data/raw/<course>/_lectures/<topic>/index.md. Section ids are encoded as
+# "<document_id>#<section_id>", the same key the chunks table stores in (document_id, section_id).
+# Tags: kind:<definitional|howto|api|task|cross>, course:<sop1|sop2>, lang:pl for Polish queries.
+# Task chunks carry no section id (the hierarchical chunker drops it), so task-style queries name
+# expected labs only.
+queries:
+  # ---------------------------------------------------------------- sop1/l0
+  - id: l0_program_arguments
+    query: how do I read the positional command line arguments of a C program
+    expected_lab_ids: [sop1/l0]
+    expected_section_ids:
+      - "sop1/l0#task-4-program-parameters-1"
+      - "sop1/l0#task-5-program-parameters-2"
+    tags: [kind:howto, course:sop1]
+  - id: l0_getenv
+    query: what does getenv return when the environment variable is not set
+    expected_lab_ids: [sop1/l0]
+    expected_section_ids: ["sop1/l0#task-6-environment-variables-1"]
+    tags: [kind:api, course:sop1]
+  - id: l0_perror
+    query: how to report a failed system call with perror and errno
+    expected_lab_ids: [sop1/l0]
+    expected_section_ids: ["sop1/l0#task-8-error-handling"]
+    tags: [kind:howto, course:sop1]
+  - id: l0_stdin_stderr
+    query: reading a line from stdin and printing diagnostics on stderr
+    expected_lab_ids: [sop1/l0]
+    expected_section_ids: ["sop1/l0#task-2-stdin-stderr"]
+    tags: [kind:howto, course:sop1]
+
+  # ---------------------------------------------------------------- sop1/l1
+  - id: l1_list_directory
+    query: how to list the contents of a directory in C
+    expected_lab_ids: [sop1/l1]
+    expected_section_ids: ["sop1/l1#browsing-a-directory"]
+    tags: [kind:howto, course:sop1]
+  - id: l1_readdir
+    query: what does readdir return
+    expected_lab_ids: [sop1/l1]
+    expected_section_ids: ["sop1/l1#browsing-a-directory"]
+    tags: [kind:api, course:sop1]
+  - id: l1_symlink_check
+    query: how to check whether a directory entry is a symbolic link with lstat and S_ISLNK
+    expected_lab_ids: [sop1/l1]
+    expected_section_ids: ["sop1/l1#technical-information"]
+    tags: [kind:api, course:sop1]
+  - id: l1_nftw
+    query: recursive traversal of subdirectories with nftw
+    expected_lab_ids: [sop1/l1]
+    expected_section_ids:
+      - "sop1/l1#browsing-directories-and-subdirectories-recursive"
+    tags: [kind:howto, course:sop1]
+  - id: l1_task_scanner
+    query: example task about scanning a directory and counting files by type
+    expected_lab_ids: [sop1/l1]
+    tags: [kind:task, course:sop1]
+
+  # ---------------------------------------------------------------- sop1/l2
+  - id: l2_zombie
+    query: what is a zombie process
+    expected_lab_ids: [sop1/l2]
+    expected_section_ids: ["sop1/l2#waiting-for-child-processes"]
+    tags: [kind:definitional, course:sop1]
+  - id: l2_fork
+    query: how to create a child process with fork
+    expected_lab_ids: [sop1/l2]
+    expected_section_ids: ["sop1/l2#creating-processes"]
+    tags: [kind:howto, course:sop1]
+  - id: l2_sigaction
+    query: difference between signal and sigaction when installing a handler
+    expected_lab_ids: [sop1/l2]
+    expected_section_ids: ["sop1/l2#signal-handling"]
+    tags: [kind:definitional, course:sop1]
+  - id: l2_sigsuspend
+    query: how to wait for a signal with sigsuspend without losing it
+    expected_lab_ids: [sop1/l2]
+    expected_section_ids:
+      - "sop1/l2#changing-the-signal-mask"
+      - "sop1/l2#managing-the-signal-mask"
+    tags: [kind:howto, course:sop1]
+  - id: l2_task_children
+    query: example task where the parent creates n children and collects their results
+    expected_lab_ids: [sop1/l2]
+    tags: [kind:task, course:sop1]
+
+  # ---------------------------------------------------------------- sop1/l3
+  - id: l3_pthread_create
+    query: how to start a thread with pthread_create
+    expected_lab_ids: [sop1/l3]
+    expected_section_ids: ["sop1/l3#creating-threads"]
+    tags: [kind:howto, course:sop1]
+  - id: l3_pthread_join
+    query: what does pthread_join do with the return value of a thread
+    expected_lab_ids: [sop1/l3]
+    expected_section_ids: ["sop1/l3#thread-joining"]
+    tags: [kind:api, course:sop1]
+  - id: l3_mutex
+    query: how to protect a shared counter with a mutex
+    expected_lab_ids: [sop1/l3]
+    expected_section_ids: ["sop1/l3#mutual-exclusion"]
+    tags: [kind:howto, course:sop1]
+  - id: l3_cancellation
+    query: how to cancel a thread and release its resources with pthread_cleanup_push
+    expected_lab_ids: [sop1/l3]
+    expected_section_ids:
+      - "sop1/l3#cleanup-functions"
+      - "sop1/l3#setting-cancelability"
+    tags: [kind:howto, course:sop1]
+  - id: l3_detached
+    query: what is a detached thread and how to spawn one
+    expected_lab_ids: [sop1/l3]
+    expected_section_ids: ["sop1/l3#spawning-a-detached-thread"]
+    tags: [kind:definitional, course:sop1]
+
+  # ---------------------------------------------------------------- sop1/l4
+  - id: l4_semaphore
+    query: how to signal between threads with a posix semaphore
+    expected_lab_ids: [sop1/l4]
+    expected_section_ids: ["sop1/l4#the-alarm-semaphores"]
+    tags: [kind:howto, course:sop1]
+  - id: l4_condition_variable
+    query: what is a condition variable and when do I call pthread_cond_wait
+    expected_lab_ids: [sop1/l4]
+    expected_section_ids: ["sop1/l4#threads-pool-conditional-variables"]
+    tags: [kind:definitional, course:sop1]
+  - id: l4_thread_pool
+    query: how does a thread pool with a task queue work
+    expected_lab_ids: [sop1/l4]
+    expected_section_ids: ["sop1/l4#threads-pool-conditional-variables"]
+    tags: [kind:howto, course:sop1]
+  - id: l4_task_barrier
+    query: example task where threads meet at a barrier before the next round
+    expected_lab_ids: [sop1/l4]
+    tags: [kind:task, course:sop1]
+
+  # ---------------------------------------------------------------- sop1/sanitizers
+  - id: san_asan
+    query: how to compile a program with AddressSanitizer
+    expected_lab_ids: [sop1/sanitizers]
+    expected_section_ids: ["sop1/sanitizers#overview"]
+    tags: [kind:howto, course:sop1]
+  - id: san_ubsan
+    query: what is UndefinedBehaviorSanitizer used for
+    expected_lab_ids: [sop1/sanitizers]
+    expected_section_ids: ["sop1/sanitizers#overview"]
+    tags: [kind:definitional, course:sop1]
+  - id: san_leaks
+    query: detecting memory leaks and buffer overflows with gcc sanitizers
+    expected_lab_ids: [sop1/sanitizers]
+    tags: [kind:howto, course:sop1]
+
+  # ---------------------------------------------------------------- sop2/l5
+  - id: l5_mkfifo
+    query: how to create a FIFO in C
+    expected_lab_ids: [sop2/l5]
+    expected_section_ids: ["sop2/l5#tutorial-5-fifo-pipe"]
+    tags: [kind:howto, course:sop2]
+  - id: l5_sigpipe
+    query: what happens when a process writes to a pipe whose read end is closed
+    expected_lab_ids: [sop2/l5]
+    expected_section_ids: ["sop2/l5#questions"]
+    tags: [kind:definitional, course:sop2]
+  - id: l5_pipe_parent_child
+    query: connecting a parent and a child process with pipe and dup2
+    expected_lab_ids: [sop2/l5]
+    expected_section_ids: ["sop2/l5#task-2-pipe"]
+    tags: [kind:howto, course:sop2]
+  - id: l5_task_card_game
+    query: example task simulating a card game with processes communicating through pipes
+    expected_lab_ids: [sop2/l5]
+    tags: [kind:task, course:sop2]
+  - id: l5_pl_fifo
+    query: jak utworzyc lacze nazwane FIFO w jezyku C
+    expected_lab_ids: [sop2/l5]
+    tags: [kind:howto, course:sop2, lang:pl]
+
+  # ---------------------------------------------------------------- sop2/l5_5
+  - id: l55_mq_open
+    query: how to open a posix message queue with mq_open
+    expected_lab_ids: [sop2/l5_5]
+    expected_section_ids: ["sop2/l5_5#creating-opening-and-removing-queues"]
+    tags: [kind:howto, course:sop2]
+  - id: l55_mq_getattr
+    query: what does mq_getattr return in the mq_attr structure
+    expected_lab_ids: [sop2/l5_5]
+    expected_section_ids: ["sop2/l5_5#queue-attributes"]
+    tags: [kind:api, course:sop2]
+  - id: l55_mq_notify
+    query: how to be notified when a message arrives in a posix queue
+    expected_lab_ids: [sop2/l5_5]
+    expected_section_ids: ["sop2/l5_5#notifications"]
+    tags: [kind:howto, course:sop2]
+  - id: l55_task_chat
+    query: example task with a chat client and server built on posix message queues
+    expected_lab_ids: [sop2/l5_5]
+    tags: [kind:task, course:sop2]
+
+  # ---------------------------------------------------------------- sop2/l6
+  - id: l6_mmap
+    query: how to map a file into memory with mmap
+    expected_lab_ids: [sop2/l6]
+    expected_section_ids: ["sop2/l6#mmap"]
+    tags: [kind:howto, course:sop2]
+  - id: l6_shm_open
+    query: how to create shared memory with shm_open and ftruncate
+    expected_lab_ids: [sop2/l6]
+    expected_section_ids: ["sop2/l6#shm"]
+    tags: [kind:howto, course:sop2]
+  - id: l6_robust_mutex
+    query: what is a robust mutex shared between processes
+    expected_lab_ids: [sop2/l6]
+    expected_section_ids:
+      - "sop2/l6#sharing-synchronisation-objects-and-the-robust-mutex"
+    tags: [kind:definitional, course:sop2]
+  - id: l6_pl_shared_memory
+    query: jak wspoldzielic pamiec miedzy procesami w systemie POSIX
+    expected_lab_ids: [sop2/l6]
+    tags: [kind:howto, course:sop2, lang:pl]
+
+  # ---------------------------------------------------------------- sop2/l7
+  - id: l7_tcp_server
+    query: how to write a TCP server with socket bind listen and accept
+    expected_lab_ids: [sop2/l7]
+    expected_section_ids: ["sop2/l7#tutorial-7-sockets-and-epoll"]
+    tags: [kind:howto, course:sop2]
+  - id: l7_epoll_wait
+    query: what does epoll_wait return in its events array
+    expected_lab_ids: [sop2/l7]
+    expected_section_ids: ["sop2/l7#tutorial-7-sockets-and-epoll"]
+    tags: [kind:api, course:sop2]
+  - id: l7_task_epoll_timeout
+    query: example task about an epoll server that answers clients with a timeout
+    expected_lab_ids: [sop2/l7]
+    tags: [kind:task, course:sop2]
+  - id: l7_unix_socket
+    query: how to use a local unix domain socket instead of a network socket
+    expected_lab_ids: [sop2/l7]
+    expected_section_ids: ["sop2/l7#task-on-local-tcp-sockets"]
+    tags: [kind:howto, course:sop2]
+
+  # ---------------------------------------------------------------- sop2/l8
+  - id: l8_sendto
+    query: how to send a UDP datagram with sendto
+    expected_lab_ids: [sop2/l8]
+    expected_section_ids: ["sop2/l8#communication"]
+    tags: [kind:howto, course:sop2]
+  - id: l8_recvfrom
+    query: what is recvfrom used for and what does it write into the address argument
+    expected_lab_ids: [sop2/l8]
+    expected_section_ids: ["sop2/l8#communication"]
+    tags: [kind:api, course:sop2]
+  - id: l8_multithreaded_server
+    query: how to build a multithreaded server that handles every client in its own thread
+    expected_lab_ids: [sop2/l8]
+    expected_section_ids: ["sop2/l8#multithreaded-servers"]
+    tags: [kind:howto, course:sop2]
+  - id: l8_task_udp
+    query: example task with a udp server distributing computations to clients
+    expected_lab_ids: [sop2/l8]
+    tags: [kind:task, course:sop2]
+
+  # ---------------------------------------------------------------- sop2/netcat
+  - id: netcat_tcp
+    query: how to test a TCP server with netcat from the command line
+    expected_lab_ids: [sop2/netcat]
+    expected_section_ids: ["sop2/netcat#tcp"]
+    tags: [kind:howto, course:sop2]
+  - id: netcat_udp
+    query: how to send a udp packet with nc
+    expected_lab_ids: [sop2/netcat]
+    expected_section_ids: ["sop2/netcat#udp"]
+    tags: [kind:howto, course:sop2]
+  - id: netcat_versions
+    query: which netcat version supports unix sockets
+    expected_lab_ids: [sop2/netcat]
+    expected_section_ids: ["sop2/netcat#netcat-versions"]
+    tags: [kind:definitional, course:sop2]
+
+  # ---------------------------------------------------------------- cross-lab
+  - id: cross_mutexes
+    query: which laboratory introduces mutexes
+    expected_lab_ids: [sop1/l3]
+    tags: [kind:cross, course:sop1]
+  - id: cross_shared_memory
+    query: in which laboratory do we use shared memory between processes for the first time
+    expected_lab_ids: [sop2/l6]
+    tags: [kind:cross, course:sop2]
+  - id: cross_signals
+    query: which laboratories use posix signals
+    expected_lab_ids: [sop1/l2, sop1/l3]
+    tags: [kind:cross, course:sop1]
+  - id: cross_sockets_vs_datagrams
+    query: difference between a stream socket and a datagram socket in the laboratories
+    expected_lab_ids: [sop2/l7, sop2/l8]
+    tags: [kind:cross, course:sop2]
+  - id: cross_pl_zombie
+    query: co to jest proces zombie i jak go uniknac
+    expected_lab_ids: [sop1/l2]
+    tags: [kind:definitional, course:sop1, lang:pl]
+
+  # ---------------------------------------------------------------- lectures
+  - id: lec_deadlock_conditions
+    query: what are the four conditions of a deadlock
+    expected_document_ids: [sop2/lecture/deadlocks]
+    expected_section_ids: ["sop2/lecture/deadlocks/index#scope"]
+    tags: [kind:definitional, course:sop2]
+  - id: lec_banker
+    query: how does the banker algorithm avoid an unsafe state
+    expected_document_ids: [sop2/lecture/deadlocks]
+    tags: [kind:definitional, course:sop2]
+  - id: lec_round_robin
+    query: explain round robin cpu scheduling and the average waiting time
+    expected_document_ids: [sop1/lecture/scheduling]
+    expected_section_ids: ["sop1/lecture/scheduling/index#scope"]
+    tags: [kind:definitional, course:sop1]
+  - id: lec_c10k
+    query: what is the c10k problem and how do event loops solve it
+    expected_document_ids: [sop2/lecture/servers]
+    expected_section_ids: ["sop2/lecture/servers/index#scope"]
+    tags: [kind:definitional, course:sop2]
+  - id: lec_pl_virtual_memory
+    query: jak dziala pamiec wirtualna i stronicowanie na zadanie
+    expected_document_ids: [sop2/lecture/vmem, sop2/lecture/mem]
+    tags: [kind:definitional, course:sop2, lang:pl]
+  - id: lec_filesystem_interface
+    query: what is the difference between a file descriptor and a FILE stream
+    expected_document_ids: [sop1/lecture/w2]
+    expected_lab_ids: [sop1/l1]
+    tags: [kind:definitional, course:sop1]

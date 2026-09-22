@@ -1,0 +1,587 @@
+--- page 1 ---
+
+Lecture 5 - Event I/O
+Operating Systems 1
+Warsaw University of Technology - Faculty of Mathematics and Information Science
+
+--- page 2 ---
+
+CPU bound processes are nearly always ready to execute
+I/O ready event
+blocking syscall
+preemption
+Application profiles
+IO-bound vs. CPU-bound applications
+time
+PID 101
+running
+ready
+running
+ready
+running
+ready
+running
+ready
+r
+wait
+ready
+r
+wait
+ready
+r
+i/o
+PID 102
+I/O bound processes spend most of the time waiting
+Short CPU "burst"
+
+--- page 3 ---
+
+while (run) {
+int ret = read(fd, buf, N);
+if (ret < 0) ERR();
+handle_read(buf, ret);
+}
+Examples: stdin read(), sigsuspend(), wait().
+It's a natural tool to wait-for (synchronize with) external events.
+Events: "user put some text", "network data came", "other process finished".
+caller blocks here
+How to wait for "two things" at once?
+Consider:
+- reading from multiple data sources
+- reading and doing some computation periodically
+Blocking syscalls problem
+I/O bound application main tool
+When invoked:
+- calling process cooperatively yields CPU to others
+- waits not consuming any CPU time
+Problems:
+- cannot do any other computation in the meantime
+- can't wait for other, unrelated external events
+
+--- page 4 ---
+
+One could refrain from using blocking syscalls at all and use
+ones which guarantee to return control immediately.
+Alternative: busy waiting
+How to unnecessarily consume CPU resources
+while (run) {
+ret = read(fd1, buf, N, O_NONBLOCK);
+if (ret >= 0) handle_read(buf, ret);
+ret = read(fd2, buf, N, O_NONBLOCK);
+if (ret >= 0) handle_read(buf, ret);
+}
+This kind of API must define to return something,
+usually erros like EAGAIN, if it could not complete immediately.
+Those are not real errors, handling them is wasted time.
+non-blocking read allows
+to check multiple sources
+in an interleaved manner
+The above loop is not I/O bound, it's CPU bound, never blocking,
+always ready for execute, despite most of the time there's nothing to do.
+As such, this is wasteful approach, discouraged in general purpose OS programming.
+
+--- page 5 ---
+
+Instead of blocking just schedule an operation via syscall.
+Ask the OS to notify calling process via event upon completion.
+Process
+never blocks!
+Asynchronous event-based programming
+Solution to a blocking syscall problem
+// configure notification
+struct async_event ev = {};
+// schedule operation(s)
+int ret = async_read(fd, buf, N, &ev);
+// do something else
+Kernel
+Async API is far less natural to the programmer. It requires
+configuring not only the operation but also how it delivers notifications.
+Later, scheduling process must somehow receive completion event(s).
+Put another way, it needs to synchronize with the async operation.
+blocking syscall
+async call
+
+--- page 6 ---
+
+Event sources
+timer ticks, timer elapse
+example functional requirement
+What asynchronous events a program might be interested in?
+I/O readiness
+Filesystem events
+Signal delivery
+Arbitrary application-level events
+run some computation every 3 seconds
+process command when user enters something into the terminal
+when user creates new file in a directory D run some computation to process it
+exit upon receiving C-c
+wait until other process/thread is done with some processing
+
+--- page 7 ---
+
+Signal-based event handling
+Asynchronous way of handling asynchronous things
+Signals are a classic way to handle asynchronous events. OS may be asked to send a signal when
+some event occurs, i.e. fd = 1 became readable or configured time has elapsed.
+PID 101
+fd 1
+create
+configure
+open
+open
+signal
+data
+Synchronous signal handling
+via sigsuspend() or sigwait()
+also suffers from these
+This approach suffers from a number of pitfalls:
+- signals sticking
+- handler code restritions (async-signal-safe)
+- does not scale (limited signal number)
+- interrupts syscalls
+fd 3
+timer
+signal
+signal
+data
+async_fd.c
+
+--- page 8 ---
+
+Timer API
+Standard POSIX interface for creating signalling timers
+int timer_create(clockid_t clockid, struct sigevent *restrict evp,
+timer_t *restrict timerid);
+int timer_gettime(timer_t timerid, struct itimerspec *curr_value);
+int timer_settime(timer_t timerid, int flags,
+const struct itimerspec* new_value,
+struct itimerspec* old_value);
+system clock ID
+monotonic/realtime/...
+what happens when
+timer elapses?
+returned timer ID
+timer config
+initial wait + interval
+The sigevent structure descibes notification. Process specifies there signal number which it wants devlivered.
+Notification by thread is also supported.
+timer_create.c
+> man 3p timer_create
+
+--- page 9 ---
+
+int fd = make_event_source();
+struct event ev;
+read(fd, &ev, sizeof(ev));
+// process ev
+Syscall based event handling
+Synchronous way of handling events
+OS exposes different way of handling async events. It provides
+syscalls blocking until event occurs and returning info about it.
+It frequently takes form of blocking read() from a (special) file
+descriptor. Reads return structures describing the event.
+In the spirit of "everything is a file" Linux provides special FDs
+for receiving timer events, signals, filesystem changes, networking I/O
+events, IPC, and others.
+ev
+...
+blocked
+read()
+event desc
+Process
+Special FD
+ev
+ev
+ev
+immediate
+immediate
+immediate
+blocked
+
+--- page 10 ---
+
+TimerFD API
+Modern, signal-free timers
+fd 3
+timerfd_create()
+read()
+expirations: 1
+...
+8 bytes
+int timerfd_create(int clockid, int flags);
+int timerfd_settime(int fd, int flags,
+const struct itimerspec* new_value,
+struct itimerspec* old_value);
+int timerfd_gettime(int fd, struct itimerspec *curr_value);
+Having a timer fd process can read() from it to obtain 8-byte integers representing elapse events.
+Until timer elapses, read blocks. When elapsed, read completes immediately. Returned integer value
+holds number of timer expirations since last read.
+creates special descriptor
+referencing the new timer
+timerfd_create.c
+> man 2 timerfd_create
+expirations: 3
+...
+8 bytes
+
+--- page 11 ---
+
+SignalFD API
+Signals without signal handler restrictions
+int signalfd(int fd, const sigset_t *mask, int flags);
+Signals also may be received by regular reads. Signalfd provides alternative method to signal handlers
+or sigwait(). Special descriptor reads return struct signalfd_siginfo instances upon receiving a signal.
+Awaited signals shall be blocked using sigprocmask().
+set of awaited signals
+-1 creates and returns new FD
+extract
+PCB
+signalfd.c
+> man 2 signalfd
+fd 3
+signalfd()
+read()
+signalfd_siginfo
+...
+sizeof() bytes
+...
+0: -
+1: blocked
+2: blocked
+signal mask
+...
+0: -
+1: -
+2: set
+signals pending
+
+--- page 12 ---
+
+SignalFD API
+Signals without signal handler restrictions
+> man 2 signalfd
+struct signalfd_siginfo {
+uint32_t ssi_signo; /* Signal number */
+uint32_t ssi_pid; /* PID of sender */
+int32_t ssi_fd; /* File descriptor (SIGIO) */
+int32_t ssi_status; /* Exit status or signal (SIGCHLD) */
+int32_t ssi_int; /* Integer sent by sigqueue(3) */
+uint64_t ssi_utime; /* User CPU time consumed (SIGCHLD) */
+uint64_t ssi_stime; /* System CPU time consumed (SIGCHLD) */
+/* ... lots of other attributes */
+};
+Data structure instances received via read() contain vairous attributes related to the consumed signal instance.
+Signalfd approach still suffers from sticking and other issues within signals nature.
+Everlasting block on mask protects main code from signals, void signal handler code related problems.
+It is very similar to what sigwait() does but provides FD-based interface.
+this is gonna prove extremely
+useful later today!
+
+--- page 13 ---
+
+Change events
+Observing state of system resources
+Frequently apps need to execute some action when some OS object changes.
+Example: buildserver, observing contents of the source tree, rebuilding when anything changes.
+Without state change events process would need
+to periodically poll and diff state (wasting CPU time).
+A -> C
+This solution also suffers from ABA problem.
+It might miss a change if polling is not frequent enough.
+Ultimately, the OS knows best when something changes,
+since it executes the change. It should notify us!
+read()
+A
+Process
+Filesystem
+A
+B
+C -> A
+A -> B
+
+--- page 14 ---
+
+inotify API
+Meet the mighty filesystem monitoring interface
+Inotify is an OS object, which needs to be created
+and is referred to via special file descriptor.
+Process has to register watches within the inotify
+instance and then can await change events with
+read().
+Inotify can hold multiple watches: on individual
+files, or whole directories. Directory watches are
+non recursive.
+init()
+add_watch(a.txt)
+write()
+ev
+blocked
+struct
+inotify_event
+> man 7 inotify
+Process
+Inotify
+fd
+Filesystem
+a.txt
+fd
+watch wd
+User
+read()
+
+--- page 15 ---
+
+int inotify_rm_watch(int fd, int wd);
+inotify API
+> man 2 inotify_init
+int inotify_init(void);
+int inotify_add_watch(int fd, const char *path, uint32_t mask);
+main inotify desciptor
+referring to inotify instance
+individual watch descriptor
+wanted event types
+file/dir path
+Initializing and managing watches
+> man 2 inotify_add_watch
+
+--- page 16 ---
+
+inotify API
+Reading filesystem events
+struct inotify_event {
+int wd; /* Watch descriptor */
+uint32_t mask; /* Mask describing event */
+uint32_t cookie; /* Unique cookie (for rename(2)) */
+uint32_t len; /* Size of name field */
+char name[]; /* Optional null-terminated name */
+};
+After registering watches, read(fd) will return instances of struct inotify_event for each detected file/dir change:
+allows for watch identification
+what has happened?
+only for directory watches
+Instances for directory events vary in size. Application should be ready to handle largest possible:
+sizeof(struct inotify_event) + NAME_MAX + 1
+> man 7 inotify
+Many may be read in a single read() call.
+
+--- page 17 ---
+
+Mask lists event types which happened. Different events may happen depending if watch refers to dir or file.
+(*) When watched object or it's watch is removed special IN_IGNORED event is generated.
+important to handle it!
+inotify API
+Event types
+File
+File in watched directory
+IN_ATTRIB
+IN_ATTRIB
+IN_ATTRIB
+IN_CREATE
+IN_DELETE
+IN_DELETE_SELF*
+IN_DELETE_SELF*
+IN_MODIFY
+IN_MODIFY
+IN_MOVE_SELF*
+IN_MOVE_SELF*
+IN_MOVED_FROM
+IN_MOVED_TO
+IN_ISDIR will be set in mask if event relates to directory (i.e. dir created)
+inode changed
+Directory
+data changed
+watch subject
+moved/deleted
+
+--- page 18 ---
+
+Initial scan race condition
+If an applications intends to cache contents
+of the watched object and update the cache
+when change is reported care must be taken
+on startup.
+read()
+A
+add_watch(a.txt)
+B -> C
+blocked
+Process
+Inotify
+fd
+Filesystem
+a.txt
+read()
+A -> B
+C
+Initial scan must be executed AFTER adding
+watches. Otherwise app might miss change
+which happens before adding watch.
+
+--- page 19 ---
+
+Directory tree watching
+Watching directory trees requires registering individual
+watches for each subdirectory recursively.
+After detecting that new sub-directory was created
+a corresponding watch must be registered.
+inotify
+root
+watch
+Deleting a directory at some level generates bottom-up
+cascade of events, deleting watches automatically.
+home
+root
+alan
+chris
+log
+env
+etc
+perm
+hey
+cat
+watch
+watch
+watch_tree.c
+
+--- page 20 ---
+
+io_uring API
+Modern async I/O interface
+For massive asynchronous read/write operations modern linux kernel introduced new API called io_uring
+IO userspace ring. It allows to submit multiple batched I/O operations to the kernel and read completion
+events. Communication happens over two queues: submission and completion.
+Low-level syscall interface is very complex as it requires establishing queues in special memory segments
+shared between userspace and kernel.
+Application usually consume io_uring API via a wrapper liburing library .
+PID 101
+Submission Queue
+read
+schedule
+completion
+events
+WARNING!
+ADVANCED STUFF
+> man 7 io_uring
+Kernel
+Completion Queue
+read
+write
+done
+done
+process
+
+--- page 21 ---
+
+io_uring API
+Modern async I/O interface
+> man 3 io_uring_queue_init
+int io_uring_queue_init(unsigned entries,
+struct io_uring *ring,
+unsigned flags);
+First thing that needs to happen is creation of queues:
+void io_uring_queue_exit(struct io_uring *ring);
+queues size
+constructed ring (out)
+Corresponding cleanup shall be called at the end of an application to free the queues:
+
+--- page 22 ---
+
+io_uring API
+Submission queue management
+> man 3 io_uring_get_sqe
+struct io_uring_sqe *io_uring_get_sqe(struct io_uring *ring);
+Sending I/O request is a 2-step process: populate queue entry (or entries) and then submit the queue.
+int io_uring_submit(struct io_uring *ring);
+Scheduling whole queue is done via single
+call which translates to a non-blocking syscall:
+void io_uring_prep_read(struct io_uring_sqe *sqe, int fd, void *buf,
+unsigned nbytes, __u64 offset);
+read()
+args
+> man 3 io_uring_prep_read
+> man 3 io_uring_submit
+
+--- page 23 ---
+
+io_uring API
+Completion queue management
+> man 3 io_uring_wait_cqe
+struct io_uring_cqe cqe;
+int io_uring_wait_cqe(struct io_uring *ring,
+struct io_uring_cqe **cqe_ptr);
+Later, the event loop waits for and retrieves completion events:
+Completion event structure contains status code (errno) and optional arbitrary u64 passed during submission.
+... and mark it as consumed to free the spot in CQ:
+void io_uring_cqe_seen(struct io_uring *ring,
+struct io_uring_cqe *cqe);
+struct io_uring_cqe {
+__u64 user_data; /* sqe->data submission passed back */
+__s32 res; /* result code for this event */
+__u32 flags;
+};
+> man 3 io_uring_cqe_seen
+
+--- page 24 ---
+
+Event multiplexing
+How to process multiple event sources
+Reading from a single data source blocks. How to run an application which awaits timers, stdin, filesystem,
+signals and other events at the same time?
+Event multiplexer
+fd
+select()
+Having coherent file desciriptor API, OS provides interface to await I/O events of mutliple
+file descriptors at once - the event multiplexer.
+There are several different APIs for multiplexing events available: select(), poll(), epoll().
+fd
+fd
+PID 101
+
+--- page 25 ---
+
+The select() syscall
+How to read from mutliple file descriptors at once?
+int select(int nfds,
+fd_set* readfds,
+fd_set* writefds,
+fd_set* errorfds,
+struct timeval* timeout);
+void FD_CLR(int fd, fd_set *fdset);
+int FD_ISSET(int fd, fd_set *fdset);
+void FD_SET(int fd, fd_set *fdset);
+void FD_ZERO(fd_set *fdset);
+optional timeout
+Select is a blocking syscall which takes mutliple file descriptors
+and returns when at least one is ready for I/O operation.
+Three descriptor sets are like signal sets (bitmask) and must be constructed via macros before the call:
+> man 3p pselect
+descriptor sets
+max fd value
+select_basic.c
+Select works with many I/O object types, including all mentioned in this lecture.
+
+--- page 26 ---
+
+process events
+block
+The event loop
+How to read from mutliple file descriptors at once?
+prepare call
+while(run) {
+FD_ZERO(&read_fds);
+FD_SET(stdin_fd, &read_fds);
+FD_SET(timer_fd, &read_fds);
+// ... other fds
+int n = select(max_fd + 1, &read_fds, NULL, NULL, NULL);
+if (n < 0) ERR();
+if (FD_ISSET(stdin_fd, &read_fds)) {
+// read stdin
+}
+if (FD_ISSET(timer_fd, &read_fds)) {
+// read timer events
+}
+}
+Select and other multiplexers are usually the heart of an event-driven application.
+Blocking call is made in "the event loop". Each time multiplexer returns,
+events are iteratively processed. Then app goes back to sleep awaiting new events.
+select_multiple.c

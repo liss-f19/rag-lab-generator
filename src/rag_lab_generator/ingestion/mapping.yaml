@@ -1,0 +1,92 @@
+# Which lecture material and which external file supports which laboratory.
+#
+# lectures:  "<course>/<topic>" = content/<course>/wyk/<topic> in the sop-site clone.
+#            SOP1 lectures may support SOP2 labs (pipes and message queues are taught in SOP1).
+# kozlowski: "<directory>/<file name>" under data/external/kozlowski/.
+#            tcpip lectures were assigned from their title pages:
+#            1 OSI Reference Model, 3 IPv4 Addressing, 4 IP/TCP/UDP Packets,
+#            5 TCP/IP Diagnostics Basics, 9 Application Layer Protocols.
+# Both lists are free to edit; every entry is checked against the clone during ingestion and a
+# missing entry is reported, never fatal.
+#
+# The "courses" section below holds material that belongs to a course as a whole instead of to one
+# laboratory; it is materialised into data/raw/<course>/_extra/ and loaded with lab_id unset.
+
+labs:
+  sop1/l0:
+    lectures: [sop1/w1]
+    kozlowski:
+      - unix/00-basics.pdf
+      - unix/01-unix.pdf
+      - unix/01-lab-unix.pdf
+      - unix/02-bash.pdf
+      - unix/02-lab-bash.pdf
+      - unix/03-commands.pdf
+      - unix/03-lab-commands.pdf
+      - unix/11-lab-bash.pdf
+      - unix/bash1.sh
+      - unix/bash2.sh
+      - unix/bash3.sh
+      - unix/bash4.sh
+      - unix/tutorial.gcc_make.txt
+  sop1/l1:
+    lectures: [sop1/w2]
+    kozlowski:
+      - unix/04-streams.pdf
+      - unix/04-lab-streams.pdf
+      - unix/05-users.pdf
+      - unix/05-lab-users.pdf
+      - unix/06-files.pdf
+      - unix/06-lab-files.pdf
+  sop1/l2:
+    lectures: [sop1/w4, sop1/w5, sop1/events]
+    kozlowski:
+      - unix/07-processes.pdf
+      - unix/07-lab-processes.pdf
+      - unix/08-system.pdf
+      - unix/08-lab-system.pdf
+  sop1/l3:
+    lectures: [sop1/w6, sop1/w5]
+    kozlowski: []
+  sop1/l4:
+    lectures: [sop1/w6, sop1/w7, sop1/scheduling]
+    kozlowski: []
+  sop1/sanitizers:
+    lectures: []
+    kozlowski:
+      - unix/tutorial.gcc_make.txt
+  sop2/l5:
+    lectures: [sop1/pipe, sop1/mqueue, sop2/sync2]
+    kozlowski: []
+  sop2/l5_5:
+    lectures: [sop1/mqueue, sop2/sync2]
+    kozlowski: []
+  sop2/l6:
+    lectures: [sop2/shm, sop2/sync, sop2/sync2, sop2/mem, sop2/vmem]
+    kozlowski: []
+  sop2/l7:
+    lectures: [sop2/networks, sop2/sockets, sop2/servers]
+    kozlowski:
+      - tcpip/lecture_1.pdf
+      - tcpip/lecture_3.pdf
+      - tcpip/lecture_4.pdf
+      - tcpip/lecture_9.pdf
+  sop2/l8:
+    lectures: [sop2/sockets, sop2/servers, sop2/deadlocks]
+    kozlowski:
+      - tcpip/lecture_4.pdf
+      - tcpip/lecture_9.pdf
+  sop2/netcat:
+    lectures: [sop2/networks, sop2/sockets]
+    kozlowski:
+      - tcpip/lecture_5.pdf
+
+# Course-wide reference material, not tied to a single laboratory.
+courses:
+  sop1:
+    kozlowski:
+      - unix/09-vim.pdf
+      - unix/10-awk.pdf
+      - unix/awk-man-b5-1.pdf
+  sop2:
+    kozlowski: []

@@ -1,0 +1,45 @@
+[
+  {
+    "config": {
+      "rag": "vector",
+      "chunker": "hierarchical",
+      "searcher": "dense",
+      "embedder": "bge_m3_hf",
+      "k": 8,
+      "inner_searcher": null,
+      "hops": null,
+      "needs_embeddings": true,
+      "needs_graph": false,
+      "filter_course": false
+    },
+    "metrics": {
+      "recall_at_k": 0.9426229508196722,
+      "mrr": 0.7882708821233412,
+      "ndcg_at_k": 0.6111379595280353,
+      "latency_ms_p50": 311.5281249920372,
+      "n_queries": 61,
+      "hit_at_k": 0.9508196721311475,
+      "section_recall_at_k": 0.686046511627907,
+      "coverage": 0.860655737704918,
+      "latency_ms_mean": 330.3852316386211,
+      "latency_ms_p50_warm": 311.5281249920372,
+      "latency_ms_first": 458.7105000100564,
+      "context_chars_mean": 7607.606557377049,
+      "distinct_documents_mean": 3.8688524590163933,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.014344262295081968,
+        "info": 0.004098360655737705,
+        "lecture": 0.3770491803278688,
+        "summary": 0.12704918032786885,
+        "task": 0.15368852459016394,
+        "tutorial": 0.3237704918032787
+      },
+      "support_distribution": {
+        "background": 0.03483606557377049,
+        "primary": 0.9651639344262295
+      }
+    },
+    "created_at": "2026-09-22T11:19:54.545956"
+  }
+]

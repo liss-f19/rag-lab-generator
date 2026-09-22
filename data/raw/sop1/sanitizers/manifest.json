@@ -1,0 +1,12 @@
+{
+  "lab_id": "sop1/sanitizers",
+  "course": "sop1",
+  "slug": "sanitizers",
+  "generated_at": "2026-09-22T09:14:50.668932",
+  "sources": [],
+  "slides": [],
+  "extra": [
+    "tutorial.gcc_make.txt"
+  ],
+  "src": []
+}

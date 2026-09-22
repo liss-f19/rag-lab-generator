@@ -1,0 +1,77 @@
+--- page 1 ---
+
+Unix Fundamentals – Introduction
+Marek Kozłowski
+Faculty of Mathematics and Information Sciences
+Warsaw University of Technology
+1. Free Libre Open Source Software
+(a) Read the 2-clause BSD license: https://www.freebsd.org/copyright/freebsd-license.
+html.
+(b) Note the BSD-licensed code can be included in proprietary software or its next
+releases can be licensed as proprietary software.
+(c) Read the GNU GPL3 license preamble https://www.gnu.org/licenses/gpl.
+html.
+(d) Take a look at the GNU Free System Distribution Guidelines: https://www.gnu.
+org/distros/free-system-distribution-guidelines.html.
+(e) Visit the following web sites:
+• FLOSS and FOSS explained by Richard Stallman:
+https://www.gnu.org/philosophy/floss-and-foss.en.html
+• Software Freedom by Debian:
+https://www.debian.org/intro/free
+• Free Software Foundation home page:
+https://fsf.org
+• RedHat Enterprise Linux and CentOS projects:
+https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux
+https://www.centos.org/about
+Note that RHEL is NOT a free of charge system and CentOS project doesn’t
+provide its own documentation (read RHEL’s one instead).
+• Snort NIDS (Network Intruder Detection System) homepage:
+https://snort.org
+Note that Snort is an open source engine, however the latest rules for it are
+NOT provided free of charge.
+(f) Check licenses of utilities that will be used throughout this course; open a terminal
+emulator window and execute the following commands:
+• bash --version
+• whoami --version
+• date --version
+• ls --version
+2. OS, Unix, POSIX, SUS
+(a) Visit POSIX and SUS home pages:
+https://standards.ieee.org/standard/1003_1-2017.html
+http://www.unix.org/ (wait a few seconds for redirection)
+(b) Read about FreeBSD and POSIX/SUS compatibility:
+https://wiki.freebsd.org/FreeBSD_and_Standards
+1
+
+--- page 2 ---
+
+3. Unix, Unix-based and Unix-like Systems
+(a) Visit homepages of main BSD open software operating systems:
+https://www.freebsd.org (general purpose)
+https://www.netbsd.org (portability)
+https://www.openbsd.org (security)
+as well as some main FreeBSD forks, for example:
+https://www.dragonflybsd.org (virtualization)
+https://www.trueos.org (desktop)
+https://www.midnightbsd.org (desktop)
+http://www.ghostbsd.org (user friendliness)
+(b) Visit the GNU project webpage:
+https://www.gnu.org
+What’s the name of the GNU kernel?
+(c) Some popular main Linux/GNU distros:
+https://www.archlinux.org
+https://www.debian.org
+https://www.gentoo.org
+https://www.opensuse.org
+https://www.slackware.com
+(d) Some BSD/GNU hybrid systems:
+https://www.debian.org/ports/hurd/index.en.html (Debian GNU/Hurd)
+https://www.debian.org/ports/kfreebsd-gnu/index.en.html (Debian GNU/kFreeBSD)
+https://www.hyperbola.info (GNU + BSD kernel)
+(e) Some other FLOSS systems:
+https://www.openindiana.org
+https://www.reactos.org
+(f) Which popular operating system is based on BSD-derived system called Darwin?
+(g) Try to find some information on commercial Unices mentioned on the presenta-
+tion.
+2

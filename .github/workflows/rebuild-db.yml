@@ -1,0 +1,124 @@
+name: rebuild-db
+
+# Rebuilds the production database from the corpus committed under data/raw:
+# chunks of every strategy, bge-m3 vectors (HuggingFace Inference), the knowledge graph,
+# then a short retrieval evaluation whose results land in the job summary and artifacts.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "data/raw/**"
+      - "sql/**"
+      - "src/rag_lab_generator/ingestion/**"
+      - "src/rag_lab_generator/retrieval/**"
+      - "src/rag_lab_generator/eval/**"
+      - ".github/workflows/rebuild-db.yml"
+
+concurrency:
+  group: rebuild-db
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    name: chunk, embed, graph, eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL_UNPOOLED }}
+      HF_API_TOKEN: ${{ secrets.HF_API_TOKEN }}
+      LLM_PROVIDER: fake
+      EMBEDDING_PROVIDER: bge_m3_hf
+      DATA_DIR: ./data
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --locked --extra ingest
+
+      - name: Corpus present
+        run: uv run rag-lab corpus-stats
+
+      - name: Apply schema
+        run: uv run rag-lab db-init
+
+      # The hierarchical splitter and the fixed windows never call HF: the fake embedder keeps
+      # their output identical to the locally evaluated chunk set.
+      - name: Chunk hierarchical
+        run: uv run rag-lab chunk --strategy hierarchical --replace --embedder fake
+
+      - name: Chunk fixed
+        run: uv run rag-lab chunk --strategy fixed --replace --embedder fake
+
+      # Semantic grouping needs real vectors for every paragraph (~5k HF texts).
+      - name: Chunk semantic
+        run: uv run rag-lab chunk --strategy semantic --replace --embedder bge_m3_hf
+
+      - name: Embed hierarchical
+        run: uv run rag-lab index --embedder bge_m3_hf --strategy hierarchical
+
+      - name: Embed fixed
+        run: uv run rag-lab index --embedder bge_m3_hf --strategy fixed
+
+      - name: Embed semantic
+        run: uv run rag-lab index --embedder bge_m3_hf --strategy semantic
+
+      - name: Build graph
+        run: uv run rag-lab graph-build --strategy hierarchical
+
+      # Node descriptions: the real model once ANTHROPIC_API_KEY is a repository secret,
+      # deterministic stubs from the fake provider until then. Cached by source hash.
+      - name: Describe graph nodes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LLM_PROVIDER: ${{ secrets.ANTHROPIC_API_KEY && 'anthropic' || 'fake' }}
+        run: uv run rag-lab graph-describe
+
+      - name: Database stats
+        run: uv run rag-lab db-stats
+
+      - name: Evaluate
+        run: |
+          uv run rag-lab eval --config vector/dense/hierarchical/bge_m3_hf -k 8
+          uv run rag-lab eval --config vector/hybrid_rrf_idf/hierarchical/bge_m3_hf -k 8
+          uv run rag-lab eval --config graph/dense/hierarchical/bge_m3_hf --hops 1 -k 8
+
+      - name: Summarize
+        run: |
+          {
+            echo "## Retrieval after rebuild (k=8)"
+            echo
+            echo "| rag | searcher | chunker | hops | hit@8 | sect@8 | MRR | nDCG@8 | chars |"
+            echo "| --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+            uv run python - <<'EOF'
+          import csv, glob
+          for path in sorted(glob.glob("results/eval_*.csv")):
+              if path.endswith("_per_query.csv"):
+                  continue
+              for r in csv.DictReader(open(path)):
+                  print(f"| {r['rag']} | {r['searcher']} | {r['chunker']} | {r['hops'] or '-'} | "
+                        f"{float(r['hit_at_k']):.3f} | {float(r['section_recall_at_k']):.3f} | "
+                        f"{float(r['mrr']):.3f} | {float(r['ndcg_at_k']):.3f} | "
+                        f"{float(r['context_chars_mean']):.0f} |")
+          EOF
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload eval results
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: results/
+          if-no-files-found: warn

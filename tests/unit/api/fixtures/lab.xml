@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimal lab.xml validating against docs/lab.xsd, used by the API corpus tests. -->
+<lab id="sop1/l1_filesystem" course="sop1" number="1" slug="l1_filesystem" lang="en"
+     source_url="https://sop.mini.pw.edu.pl/lab/l1">
+  <title>Filesystem API</title>
+  <topics>
+    <topic>open</topic>
+    <topic>readdir</topic>
+    <topic>stat</topic>
+  </topics>
+  <tutorial>
+    <section id="browsing-a-directory" title="Browsing a directory" level="2" order="0">
+      <text>Use opendir(3) and readdir(3) to walk a directory entry by entry.</text>
+      <code ref="src/prog1.c" lang="c"/>
+    </section>
+    <section id="file-metadata" title="File metadata" level="3" order="1"
+             parent="browsing-a-directory">
+      <text>stat(2) fills a struct stat describing one file.</text>
+    </section>
+  </tutorial>
+  <tasks>
+    <task id="example1" title="Directory listing" source_url="https://sop.mini.pw.edu.pl/lab/l1#e1">
+      <statement>Write a program listing the entries of a directory given as argv[1].</statement>
+      <stages>
+        <stage n="1">Open the directory and report errors with perror.</stage>
+        <stage n="2">Print the name and the size of every regular file.</stage>
+      </stages>
+      <solution ref="src/prog1.c"/>
+      <attachments>
+        <file ref="extra/input.txt"/>
+      </attachments>
+      <notes>Remember to closedir.</notes>
+    </task>
+  </tasks>
+  <sources>
+    <file ref="src/prog1.c" lang="c" source_url="https://sop.mini.pw.edu.pl/lab/l1/prog1.c"/>
+  </sources>
+  <references>
+    <ref url="https://man7.org/linux/man-pages/man3/readdir.3.html" title="readdir(3)"/>
+  </references>
+  <metadata>
+    <item key="week">2</item>
+  </metadata>
+</lab>

@@ -1,0 +1,605 @@
+--- page 1 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+1
+CPU Scheduling
+▪Basic Concepts
+▪Scheduling Criteria 
+▪Scheduling Algorithms
+▪Operating Systems Examples
+L.J. Opalski, slides for „Operating Systems I”  course
+Last modification date: 24.11.2019
+
+--- page 2 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+2
+Basic Concepts
+▪Maximum CPU utilization obtained with 
+multiprogramming
+▪CPU–I/O Burst Cycle – Process execution 
+consists of a cycle of CPU execution and 
+I/O wait. CPU burst followed by I/O burst. 
+CPU burst distribution is of main concern
+▪Selection of CPU scheduling algorithm 
+depends on statistics of CPU-I/O bursts
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 3 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+3
+CPU Scheduler
+Short-term scheduler selects from among the processes in 
+ready queue, and allocates the CPU to one of them
+Queue may be ordered in various ways
+CPU scheduling decisions may take place when a process:
+1. Switches from running to waiting state
+2. Switches from running to ready state
+3. Switches from waiting to ready
+4. Terminates
+Scheduling under 1 and 4 is non-preemptive
+All other scheduling is preemptive
+Consider access to shared data
+Consider preemption while in kernel mode
+Consider interrupts occurring during crucial OS activities
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 4 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+4
+Dispatcher
+▪Dispatcher module gives control of the CPU to the process 
+selected by the short-term scheduler; this involves:
+▪switching context
+▪switching to user mode
+▪jumping to the proper location in the user program to 
+restart that program
+▪Dispatch latency – time it takes for the dispatcher to stop one 
+process and start another running
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 5 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+5
+Scheduling Criteria
+System view:
+▪CPU utilization – keep the CPU as busy as possible
+▪Throughput – # of processes that complete their execution per time unit
+▪Fairness
+▪Respecting external priorities
+▪Balancing load of resources used
+User view:
+▪Turnaround time – amount of time to execute a particular process
+▪Waiting time – amount of time a process has been waiting in the ready queue
+▪Response time – amount of time it takes from when a request was submitted 
+until the first response is produced, not output  (for time-sharing environment)
+▪Predictability – a task is complete within some reasonable time regardless 
+system load.
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 6 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+6
+Scheduling Algorithm Optimization Criteria
+▪Max CPU utilization
+▪Max throughput
+▪Min turnaround time 
+▪Min waiting time 
+▪Min response time
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 7 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+7
+First- Come, First-Served (FCFS) Scheduling
+Process
+Burst Time
+P1
+24
+P2
+3
+P3
+3
+▪Suppose that the processes arrive in the order: P1 , P2 , P3  
+The Gantt Chart for the schedule is:
+▪Waiting time for P1 = 0; P2 = 24; P3 = 27
+▪Average waiting time:  (0 + 24 + 27)/3 = 17, max. waiting time = 27
+P
+P
+P
+1
+2
+3
+0
+24
+30
+27
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 8 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+8
+FCFS Scheduling (Cont.)
+Suppose that the processes arrive in the order:
+P2 , P3 , P1
+▪The Gantt chart for the schedule is:
+▪Waiting time for P1 = 6; P2 = 0; P3 = 3
+▪Average waiting time:   (6 + 0 + 3)/3 = 3 , max. waiting time = 6
+▪Much better than previous case
+▪Convoy effect - short process behind long process
+▪Consider one CPU-bound and many I/O-bound processes
+P1
+0
+3
+6
+30
+P2
+P3
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 9 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+9
+Shortest-Job-First (SJF) Scheduling
+▪Associate with each process the length of its next CPU burst
+▪
+Use these lengths to schedule the process with the shortest 
+time
+▪SJF is optimal – gives minimum average waiting time for a given 
+set of processes
+▪The difficulty is knowing the length of the next CPU request
+▪Could ask the user
+▪Preemptive version of SJF is called shortest-remaining-time-
+first (SRTF)
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 10 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+10
+Example of SJF
+ProcessArrival Time
+Burst Time
+P1
+0.0
+7
+P2
+2.0
+4
+P3
+4.0
+1
+P4
+5.0
+4
+▪SJF scheduling chart
+▪Average waiting time = (0 + 6 + 3 + 7) / 4 = 7
+▪Max. waiting time = 7
+L.J. Opalski, slides for „Operating Systems I”  course
+P1
+P3
+P2
+7
+3
+16
+0
+P4
+8
+12
+
+--- page 11 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+11
+Example of Shortest-remaining-time-first
+▪Now we add the concepts of varying arrival times and preemption to the analysis
+ProcessAarri Arrival TimeT
+Burst Time
+P1
+0.0
+7
+P2
+2.0
+4
+P3
+4.0
+1
+P4
+5.0
+4
+▪Preemptive SJF Gantt Chart
+▪Average waiting time = [9+1+0+2)]/4 = 3
+▪Max. waiting time = 9
+L.J. Opalski, slides for „Operating Systems I”  course
+4
+2
+5
+7
+P1
+P3
+P2
+11
+0
+P4
+P2
+P1
+16
+
+--- page 12 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+12
+Determining Length of Next CPU Burst
+▪Can only estimate the length of the next CPU burst
+▪Prediction can be done by using the length of previous CPU bursts, 
+using exponential averaging
+▪Commonly, α set to ½
+:
+Define
+  
+4.
+1
+0 ,
+  
+3.
+burst
+  
+CPU
+ 
+next
+ 
+the
+ 
+for
+ 
+value
+ 
+predicted
+ 
+  
+2.
+burst
+  
+CPU
+ 
+ 
+of
+ 
+length
+  
+actual
+  
+1.
+
+
+=
+=
++
+
+
+
+1
+n
+th
+n
+n
+t
+(
+) .
+1
+ 
+1
+n
+n
+n
+t
+
+
+
+
+−
++
+=
+=
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 13 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+13
+Prediction of the Length of the Next CPU Burst
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 14 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+14
+Priority Scheduling
+▪A priority number (integer) is associated with each process
+▪The CPU is allocated to the process with the highest priority 
+(smallest integer highest priority)
+▪Preemptive or 
+▪Nonpreemptive
+▪SJF is priority scheduling where priority is the inverse of predicted 
+next CPU burst time
+▪Problem Starvation – low priority processes may never execute
+▪Solution Aging – as time progresses increase the priority of the 
+process
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 15 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+15
+Example of Priority Scheduling
+ProcessA arri Burst TimeT
+Priority
+P1
+10
+3
+P2 
+1
+1
+P3
+2
+4
+P4
+1
+5
+P5
+5
+2
+▪Priority scheduling Gantt Chart
+▪Average waiting time = 8.2, max. waiting time = 18
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 16 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+16
+Round Robin (RR)
+▪Each process gets a small unit of CPU time (time quantum q), 
+usually 10-100 milliseconds.  After this time has elapsed, the 
+process is preempted and added to the end of the ready queue.
+▪If there are n processes in the ready queue and the time quantum 
+is q, then each process gets 1/n of the CPU time in chunks of at 
+most q time units at once.  No process waits more than (n-1)q 
+time units.
+▪Timer interrupts every quantum to schedule next process
+▪Performance
+▪q large FIFO
+▪q small q must be large with respect to context switch, 
+otherwise overhead is too high
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 17 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+17
+Example of RR with Time Quantum = 4
+Process
+Burst Time
+P1
+24
+P2
+3
+P3
+3
+▪The Gantt chart is: 
+▪Typically, higher average turnaround than SJF, but better response
+▪q should be large compared to context switch time
+▪q usually 10ms to 100ms, context switch < 10 usec
+P
+P
+P
+1
+1
+1
+0
+18
+30
+26
+14
+4
+7
+10
+22
+P2
+P3
+P1
+P1
+P1
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 18 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+18
+Time Quantum and Context Switch Time
+L.J. Opalski, slides for „Operating Systems I”  course
+▪Context switching is a waste for the system →cannot be too frequent
+▪Scheduler decision has to be made with short time frame →system 
+data structures  have to be designed with this in mind.
+
+--- page 19 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+19
+Turnaround Time Varies With The Time Quantum
+80% of CPU bursts 
+should be shorter than q
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 20 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+20
+Multilevel Queue
+▪Ready queue is partitioned into separate queues, eg:
+▪foreground (interactive)
+▪background (batch)
+▪Process permanently in a given queue
+▪Each queue has its own scheduling algorithm:
+▪foreground – RR
+▪background – FCFS
+▪Scheduling must be done between the queues:
+▪Fixed priority scheduling; (i.e., serve all from foreground then 
+from background).  Possibility of starvation.
+▪Time slice – each queue gets a certain amount of CPU time 
+which it can schedule amongst its processes; i.e., 80% to 
+foreground in RR
+▪20% to background in FCFS 
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 21 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+21
+Multilevel Feedback Queue
+▪A process can move between the various queues; aging can be 
+implemented this way
+▪Multilevel-feedback-queue scheduler defined by the following 
+parameters:
+▪number of queues
+▪scheduling algorithms for each queue
+▪method used to determine when to upgrade a process
+▪method used to determine when to demote a process
+▪method used to determine which queue a process will enter 
+when that process needs service
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 22 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+22
+Multilevel Queue Scheduling
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 23 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+23
+Multilevel Feedback Queue
+▪A process can move between the various queues; aging can be 
+implemented this way
+▪Multilevel-feedback-queue scheduler defined by the following 
+parameters:
+▪number of queues
+▪scheduling algorithms for each queue
+▪method used to determine when to upgrade a process
+▪method used to determine when to demote a process
+▪method used to determine which queue a process will enter 
+when that process needs service
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 24 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+24
+Example of Multilevel Feedback Queue
+▪Three queues: 
+▪
+Q0 – RR with time quantum 8 milliseconds
+▪
+Q1 – RR time quantum 16 milliseconds
+▪
+Q2 – FCFS
+▪Scheduling
+▪
+A new job enters queue Q0 which is served
+FCFS
+•
+When it gains CPU, job receives 8 
+milliseconds
+•
+If it does not finish in 8 milliseconds, 
+job is moved to queue Q1
+▪
+At Q1 job is again served FCFS and 
+receives 16 additional milliseconds
+•
+If it still does not complete, it is 
+preempted and moved to queue Q2
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 25 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+25
+Windows Scheduling
+▪Windows uses priority-based preemptive scheduling
+▪Highest-priority thread runs next
+▪Dispatcher is scheduler
+▪Thread runs until (1) blocks, (2) uses time slice, (3) preempted by higher-priority thread
+▪Real-time threads can preempt non-real-time ones
+▪32-level priority scheme
+▪Variable class is 1-15, real-time class is 16-31
+▪Priority 0 is memory-management thread
+▪Queue for each priority
+▪If no run-able thread, idle thread is run
+•
+If wait occurs, priority boost after becoming ready, depends on what was waited for. 
+Foreground window given 3x priority boost
+•
+Windows 7 added user-mode scheduling (UMS) 
+•
+Applications create and manage threads independent of kernel
+•
+For large number of threads, much more efficient.
+L.J. Opalski, slides for „Operating Systems I”  course
+
+--- page 26 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the textbook
+„Applied Operating Systems Concepts”
+26
+POSIX scheduling
+▪Each process or thread is controlled by an associated scheduling policy and 
+priority. Associated with each policy is a priority range. Each policy definition 
+specifies the minimum priority range for that policy. The priority ranges for each 
+policy may overlap the priority ranges of other policies. Four scheduling policies are 
+defined; others may be defined by the implementation.
+▪SCHED_FIFO : First in-first out (FIFO) scheduling policy.
+▪SCHED_RR : Round robin scheduling policy.
+▪SCHED_SPORADIC : Sporadic server scheduling policy.
+▪SCHED_OTHER : Another scheduling policy (default for normal 
+processes/threads)
+▪Linux scheduler – a kernel component that decides which runnable thread will be 
+executed by CPU next. All scheduling is preemptive. Scheduling policies:
+▪Normal scheduling policies: SCHED_OTHER, SCHED_BATCH, SCHED_IDLE
+▪Real-time scheduling policies: SCHED_FIFO, SCHED_RR,
+SCHED_DEADLINE (in place of SCHED_SPORADIC)
+▪More (details) to come - next semester
+L.J. Opalski, slides for „Operating Systems I”  course

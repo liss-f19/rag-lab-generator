@@ -1,0 +1,62 @@
+/*
+ * Role:   Global stylesheet: Tailwind v4 entry point, base theme and code-highlighting colors.
+ * Input:  none
+ * Output: Utility classes for every component plus the .hljs token colors used by markdown.
+ * Flow:   Imports Tailwind, sets the light/dark page surface through color-scheme and body
+ *         classes, then declares a compact highlight.js palette that works in both schemes.
+ */
+@import 'tailwindcss';
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-100 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* Scrollbars stay visible but unobtrusive inside the scrolling panels. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184 / 0.5) transparent;
+}
+
+.prose-tight :where(p, ul, ol, pre, table) {
+  @apply my-2;
+}
+
+.hljs-comment,
+.hljs-quote {
+  @apply text-slate-500 italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in {
+  @apply text-violet-600 dark:text-violet-300;
+}
+.hljs-string,
+.hljs-attr,
+.hljs-meta-string {
+  @apply text-emerald-600 dark:text-emerald-300;
+}
+.hljs-number,
+.hljs-literal {
+  @apply text-amber-600 dark:text-amber-300;
+}
+.hljs-title,
+.hljs-function .hljs-title,
+.hljs-section {
+  @apply text-sky-600 dark:text-sky-300;
+}
+.hljs-meta,
+.hljs-symbol,
+.hljs-type {
+  @apply text-rose-600 dark:text-rose-300;
+}

@@ -1,0 +1,446 @@
+--- page 1 ---
+
+Application Layer Protocols
+Marek Kozłowski
+Faculty of Mathematics and Information Sciences
+Warsaw University of Technology
+Warsaw, 2023/2024
+
+--- page 2 ---
+
+Contents
+1 Network Time Protocol
+2 Telnet
+3 File Transfer Protocols
+4 HyperText Transfer Protocol
+5 Mail Transfer Protocols
+
+--- page 3 ---
+
+Outline of the lecture
+1 Network Time Protocol
+2 Telnet
+3 File Transfer Protocols
+4 HyperText Transfer Protocol
+5 Mail Transfer Protocols
+
+--- page 4 ---
+
+Network Time Protocol (NTP, Mills)
+NTPv4 specified by the RFC 5905 based on Mills’ work:
+http://www.eecis.udel.edu/~mills/ntp.html
+Now the same RFC describes Simple NTP (SNTP).
+A commonly used, lightweight and portable SNTP
+implementation is OpenNTPD (OpenBSD).
+The full-featured and standard compliant NTP implementation
+can be obtained from the NTP R&D Project website at
+http://www.ntp.org (C sources).
+
+--- page 5 ---
+
+NTP – Synchronization
+UDP port 123 (NTP/SSL – 563)
+atomic clocks are used as time sources
+servers that synchronize directly to atomic clocks are called
+stratum 1 servers
+numerous public stratum 1 servers or pools are available
+NTP clients can act as NTP servers for other hosts (their
+stratum is the source stratum + 1)
+maximal allowed stratum value is equal to 15
+NTP configuration file is ntp.conf, the daemon is called ntpd
+and the client command is ntpdate
+
+--- page 6 ---
+
+Coordinated Universal Time (UTC)
+NTP synchronization uses the UTC time which is
+a high-precision atomic standard.
+Due to irregularity of the Earth rotation the IERS
+(International Earth Rotation and Reference Systems
+Service) periodically introduces so-called leap seconds which
+synchronize the UTC and the astronomical time.
+UTC should not be identified with the GMT (Greenwich Mean
+Time) which is a solar (astronomical) time.
+
+--- page 7 ---
+
+Outline of the lecture
+1 Network Time Protocol
+2 Telnet
+3 File Transfer Protocols
+4 HyperText Transfer Protocol
+5 Mail Transfer Protocols
+
+--- page 8 ---
+
+Telnet – Remote Shell
+Standardized by the RFC 854–861 (1983).
+Connections to the telnet server (TCP port 23) allowed remote
+shell sessions.
+Shell sessions were not ciphered; the unidirectional
+authentication was based on a user name and a password.
+RFCs 2941–2953 (2000) extended the telnet with cryptographic
+mechanism.
+Development of the SSH protocol marginalized telnet as a remote
+shell session protocol.
+
+--- page 9 ---
+
+Telnet – Raw TCP Sessions
+RFC 854:
+The purpose of the TELNET Protocol is to provide a fairly
+general, bi-directional, eight-bit byte oriented communications
+facility
+Telnet clients can be used for establishing raw TCP sessions to
+other TCP-based services that don’t use encryption, for example:
+$ telnet smtphost.somedomain 25
+$ telnet webhost.somedomain 80
+$ telnet ftphost.somedomain 21
+(for debugging or impressing virginibus facilibus et formosis)
+
+--- page 10 ---
+
+RAW TCP Sessions over SSL/TLS
+For SSL/TLS encrypted connections use (OpenSSL):
+$ openssl s client -connect smtphost:465 -quiet
+$ openssl s client -connect webhost:443 -quiet
+or alternatively (GnuTLS):
+$ gnutls-cli -p 465 smtphost
+$ gnutls-cli -p 443 webhost
+
+--- page 11 ---
+
+Outline of the lecture
+1 Network Time Protocol
+2 Telnet
+3 File Transfer Protocols
+4 HyperText Transfer Protocol
+5 Mail Transfer Protocols
+
+--- page 12 ---
+
+File Transfer Protocol (FTP)
+standardized by the RFC 959 (1985)
+TCP transport
+separate connections for the session (port 21) and for each data
+transfer
+sessions in form of ASCII string exchange:
+command →
+code and data ←
+
+--- page 13 ---
+
+FTP – Active and Passive Modes
+Each data transfer can be in either active or passive mode.
+Active mode:
+connection opened by the server (port 20),
+the client provides the port number in the PORT command.
+Passive mode:
+connection initiated by the client,
+the server provides the IP and port numbers in response to the
+PASV command.
+
+--- page 14 ---
+
+FTP – Selected Commands
+Access control commands, for example:
+USER, PASS, CWD (cd), REIN (reinitialize), QUIT
+Transfer control commands, for example:
+PORT, PASV (passive), TYPE
+FTP service commands:
+RETR, STOR, APPE, DELE, MKD (mkdir), RMD, PWD,
+NLST (ls)
+Note: Don’t confuse FTP commands with FTP client program
+commands!
+
+--- page 15 ---
+
+FTP – Issues
+Sessions to the port 21 idle during data transfer and therefore
+may timeout on firewalls.
+The active mode cannot be used if clients are behind NATs.
+Sessions are not encrypted and there is at most unilateral
+authentication – by username/password.
+No data integrity check nor even the CRC checksum verification.
+
+--- page 16 ---
+
+FTP Secure
+Any use of the FTP other than anonymous one is highly unsafe
+– vulnerable to almost any attack.
+FTP embedded into TLS/SSL (FTPS) can be used instead.
+Securing FTP with TLS/SSL is described in the RFC 4217.
+FTPS should not be confused with SFTP!
+
+--- page 17 ---
+
+SSH File Transfer Protocol (SFTP)
+unrelated to FTP
+developed by the IETF SECSH Working Group
+usually implemented as a SSH subsystem
+single sessions via TCP port 22 (SSH port)
+currently not specified by any RFC
+
+--- page 18 ---
+
+Trivial File Transfer Protocol (TFTP)
+unrelated to FTP
+standardized by the RFC 1350
+UDP the port 69
+extremely simplified:
+no authentication nor encryption
+no folder browsing
+transferring files of size up to 32 MB
+commonly used for boot image download during system startup
+(with BOOTP)
+
+--- page 19 ---
+
+TFTP – Packets
+There are only five TFTP packet types:
+PRQ (read request) and WRQ (write request) that contain a file
+name and a transfer mode (ASCII, binary),
+DATA that contain 2-byte block number and 0–511 (the last
+fragment) or 512 (more fragments exist) bytes of data (so called
+block),
+ACK that contain 2-byte block number; those packets
+acknowledge receiving of DATA (any block must be acknowledged
+separately),
+ERROR that contain 2-byte error codes.
+
+--- page 20 ---
+
+Outline of the lecture
+1 Network Time Protocol
+2 Telnet
+3 File Transfer Protocols
+4 HyperText Transfer Protocol
+5 Mail Transfer Protocols
+
+--- page 21 ---
+
+HyperText Transfer Protocol (HTTP)
+developed by IETF and World Wide Web Consortium1
+TCP2 transport, port 80 (HTTPS – 443)
+no HTTP sessions exist
+subsequent requests matched (e.g. e-shopping) by cookies
+1http://www.w3.org
+2See the notes on HTTP3/QUIC on next slides.
+
+--- page 22 ---
+
+HTTP/1.x
+Stateless request/response exchange protocol:
+command →
+code and data ←
+HTTP/1.0 – request, reply, close.
+HTTP/1.1 (RFC 2616) introduces so-called persistent
+connections (response codes 100 and 101) which allow parallel
+(pipelining) continued queries to retrieve additional page
+elements.
+
+--- page 23 ---
+
+HTTP/1.1 Commands
+Requests:
+GET and HEAD (the only one required),
+POST, PUT and DELETE (optional) – users should be noticed
+(for example: pressing a button),
+TRACE, OPTIONS (checking what requests are served) and
+CONNECT.
+Response codes:
+2xx – success,
+3xx – redirection,
+4xx – request error,
+5xx - server error,
+
+--- page 24 ---
+
+HTTP/2
+HTTP/2 (RFC 9113) designed to optimize transfer:
+headers can be sent in compressed (binary) form,
+it is possible to prioritize page elements for download,
+pipelining is replaced by multiplexing (query parallelism),
+when the page is changed (updated), new data can be
+automatically pushed to the client.
+Messages are exchanged in form of binary messages (so-called
+HTTP/2 frames).
+For HTTP/2 without SSL/TLS version support requires prior
+knowledge.
+
+--- page 25 ---
+
+HTTP/3
+Next generation proposal by Google.
+Standardized by the RFC 9000 (2022).
+Experimental, limited or no support as of 2023.
+Uses the QUIC transport:
+a layer over the UDP (implemented in the userland rather than a
+kernel level),
+that eliminates head-of-line blocking,
+with embedded TLS,
+with connection migration (connections identified by CIDs rather
+than IPs).
+
+--- page 26 ---
+
+Uniform Resource Locator (URL)
+Format created for World Wide Web hyperlinks in 1991.
+Identifies resources as well as their locations.
+In 1994 extended to the URI (Uniform Resource Identifier)
+format.
+The most recent RFC document that describes URIs is the
+RFC 3986 (2005).
+
+--- page 27 ---
+
+URL Format
+scheme://authority/path?query\#fragment
+scheme usually specifies the access (application) protocol (http,
+ftp, ldap),
+authority is a name or an IP, optionally preceded with
+a username and a password: (user:password@address:port),
+path is a path to resource (directory) delimited with ’/’,
+query denotes dynamic program parameters, database queries
+etc.,
+fragment identifies resource fragments.
+
+--- page 28 ---
+
+Uniform Resource Identifier (URI)
+URLs identify resources and locations. URNs (Uniform
+Resource Names) unambiguously identify resource names in
+some name space which are independent of physical locations, for
+example: urn:ietf:rfc:3986.
+URI is a generalized format that describes URLs, URNs and
+so-called URI References (relative links).
+
+--- page 29 ---
+
+Outline of the lecture
+1 Network Time Protocol
+2 Telnet
+3 File Transfer Protocols
+4 HyperText Transfer Protocol
+5 Mail Transfer Protocols
+
+--- page 30 ---
+
+Simple Mail Transfer Protocol (SMTP)
+standardized by the RFC 821 (1982)
+simple, text-based mail transfer protocol
+uses the TCP transport (not a strict requirement)
+obsoleted by Extended SMTP framework (RFC 5321) that adds
+e.g.
+8BITMIME (RFC 6152) – binary files transfers
+SMTP-AUTH (RFC 4954) – sender’s authentication
+STARTTLS (RFC 3207) – SSL/TLS encrypted connections
+the terms SMTP and ESMTP often used interchangeably
+
+--- page 31 ---
+
+SMTP Ports
+SMTP ports:
+25 – SMTP (obsolete),
+465 – SMTP/SSL (unlike STARTTLS, the entire session is
+tunneled inside SSL),
+587 – submission port, recommended for sending mail (receiving
+a shipment for a foreign MTA usually requires sender
+authentication, see relaying).
+Most servers accept client connections on all three ports.
+
+--- page 32 ---
+
+Secure Mail Transmission
+ESMTP extension called STARTTLS may be used for secure
+mail transfer. STARTLS uses standard ESMTP port.
+Whole SMTP/ESMTP connections can be tunnelled via SSL
+(port 465).
+For receiving mail from SMTP clients using a special submission
+port (587) is recommended. Usually those connections use the
+ESMTP STARTTLS extension.
+Many providers block their clients outgoing connections to the
+port 25.
+
+--- page 33 ---
+
+SMTP Commands
+Starting a session:
+HELO – SMTP,
+EHLO – ESMTP.
+EHLO requires client’s FQDN as an argument.
+The server responds to EHLO with a list of available extensions.
+Basic mail transfer commands:
+MAIL FROM:
+RCPT TO:
+DATA (ends with a line containing only a period)
+
+--- page 34 ---
+
+Sender and Recipient Addresses
+The pair of addresses: MAIL FROM: and RCPT TO: is called an
+envelope.
+The shipment is processed based on the envelope.
+The email header (which is an integral part of the email content,
+i.e. DATA) may contain the fields from: and to: .
+The address data from the envelope and from the header may be
+different (this is not an error or incorrectness).
+Most client programs display the sender and recipient based on
+header data.
+
+--- page 35 ---
+
+SMTP Relaying
+SMTP allows so-called relaying, that is using intermediate
+SMTP servers (which act as SMTP clients).
+If mail cannot be delivered to the destination SMTP servers are
+obligated to send undeliverable mail notification3.
+Before giving up several retry attempts are being made.
+SMTP servers should not be configured as open relays, that
+means that there should be administrative rules for incoming
+(passing through) mail that protect form spam. Open relays are
+usually blacklisted (placed on DNSRBL lists).
+3It makes backscattering attacks possible.
+
+--- page 36 ---
+
+Selected Spam Protection Methods
+RBL/DNSBL lists, e.g. cbl.abuseat.org , bl.spamcop.net ,
+sbl.spamhaus.org4
+ESMTP session control, e.g.:
+EHLO: no FQDN, non-existent FQDN or false FQDN (rare case)
+so called unauthorized pipelining
+greylisting (’I’m busy now, retry after n seconds’)
+relaying policies
+checksum exchange networks, e.g. dcc or vipul’s razor
+content analysis (regexp)
+4See: https://mxtoolbox.com/blacklists.aspx
+
+--- page 37 ---
+
+Post Office Protocol (POP3)
+protocol for fetching mail from inbox to a local computer
+defined in RFC 1939
+TCP port 110 (POP3/SSL – 995)
+simple queue mechanism:
+unidirectional mail transfer
+no folder management
+no selective fetching
+new mail identified based on so-called UIDL (Unique
+IDentification Listing) number
+
+--- page 38 ---
+
+Internet Message Access Protocol (IMAP4)
+mailbox management protocol
+defined in RFC 9051
+TCP port 143 (IMAP4/SSL – 993)
+advanced mailbox management, e.g.:
+bidirectional synchronization
+support for many folders
+search (server side)
+selective transfers
+commonly used by web mail access programs like SquirrelMail,
+RoundCube or Horde
+exemplary IMAP4 session:
+https://datatracker.ietf.org/doc/html/rfc3501#section-8
