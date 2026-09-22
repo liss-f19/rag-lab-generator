@@ -74,6 +74,17 @@ cd web && npm run build && npm run lint
 Code regulations (file headers, comments, typing, registries) are in `CLAUDE.md`. CI (`.github/workflows/ci.yml`)
 runs pre-commit, mypy, unit and integration tests against a pgvector service, and the Docker build.
 
+Before pushing, run the same steps the way CI sees them:
+
+```bash
+scripts/ci-local.sh                        # copy of the git-visible files, empty pgvector container, CI step order, ~5 min
+```
+
+Two things differ between a laptop and the runner and both are reproduced: the local database is
+full while CI's is empty, and the working tree holds files git ignores (pdfs, `data/external`,
+lab `slides/`) while the checkout does not. A test that silently depends on either passes here
+and fails there; the script runs on a copy of exactly what a commit would contain.
+
 ## Repository map
 
 ```

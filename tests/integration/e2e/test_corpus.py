@@ -6,6 +6,8 @@ Output: pytest assertions naming the offending lab and file.
 Flow:   Enumerates the twelve expected labs, validates each lab.xml against the XSD, parses every
         manifest.json as LabManifest, checks summaries are non-empty, resolves every ref attribute
         to a file on disk, forbids leftover hugo shortcodes and checks the Kozlowski sidecars.
+        Pdfs, the lab slides/ copies and data/external are not versioned, so on a git checkout
+        (CI) the checks that need them are skipped or restricted to the text files.
 """
 
 import json
@@ -40,6 +42,9 @@ EXPECTED_LABS: list[tuple[str, str]] = [
     ("sop2", "netcat"),
 ]
 LAB_IDS = [f"{course}/{slug}" for course, slug in EXPECTED_LABS]
+# A full local ingest has data/external; a git checkout has only the text of data/raw.
+FULL_INGEST = KOZLOWSKI_DIR.is_dir()
+UNVERSIONED_SUFFIXES = {".pdf"}
 # Reference pages without example tasks (their "tasks" are tutorial sections) ...
 LABS_WITHOUT_TASKS = {"sop1/l0_posix_environment", "sop1/sanitizers", "sop2/netcat"}
 # ... and without downloadable sources: no src/ files, no refs, no provenance entries.
@@ -78,7 +83,8 @@ def test_exactly_twelve_labs_present() -> None:
 @pytest.mark.parametrize(("course", "slug"), EXPECTED_LABS, ids=LAB_IDS)
 def test_lab_files_present_and_non_empty(course: str, slug: str) -> None:
     lab = _lab_dir(course, slug)
-    for name in ("lab.xml", "manifest.json", "summary.md", "summary.pdf"):
+    names = ("lab.xml", "manifest.json", "summary.md") + (("summary.pdf",) if FULL_INGEST else ())
+    for name in names:
         path = lab / name
         assert path.is_file(), f"{path} missing"
         assert path.stat().st_size > 0, f"{path} is empty"
@@ -162,10 +168,11 @@ def test_sop1_l1_covers_the_directory_api() -> None:
 @pytest.mark.parametrize(("course", "slug"), EXPECTED_LABS, ids=LAB_IDS)
 def test_src_directory_is_populated(course: str, slug: str) -> None:
     src = _lab_dir(course, slug) / "src"
+    if f"{course}/{slug}" in LABS_WITHOUT_SOURCES:
+        return  # an empty src/ is not versioned by git
     assert src.is_dir(), f"{src} missing"
     files = [p for p in src.rglob("*") if p.is_file()]
-    if f"{course}/{slug}" not in LABS_WITHOUT_SOURCES:
-        assert files, f"{src} holds no source files"
+    assert files, f"{src} holds no source files"
 
 
 def _mapping() -> dict[str, object]:
@@ -181,6 +188,11 @@ def test_slides_and_extra_match_the_manifest(course: str, slug: str) -> None:
     lab = _lab_dir(course, slug)
     manifest = LabManifest.model_validate(json.loads((lab / "manifest.json").read_text("utf-8")))
     for folder, declared in (("slides", manifest.slides), ("extra", manifest.extra)):
+        if not FULL_INGEST:
+            # slides/ is not versioned at all; extra/ is versioned without its pdfs
+            if folder == "slides":
+                continue
+            declared = [n for n in declared if Path(n).suffix.lower() not in UNVERSIONED_SUFFIXES]
         if not declared:
             continue
         directory = lab / folder
@@ -207,7 +219,8 @@ def test_mapping_covers_every_lab() -> None:
 
 
 def test_kozlowski_pdfs_have_text_sidecars() -> None:
-    assert KOZLOWSKI_DIR.is_dir(), f"{KOZLOWSKI_DIR} missing"
+    if not FULL_INGEST:
+        pytest.skip(f"{KOZLOWSKI_DIR} is not versioned; run `rag-lab ingest` for this check")
     pdfs = sorted(KOZLOWSKI_DIR.rglob("*.pdf"))
     assert pdfs, f"no pdfs under {KOZLOWSKI_DIR}"
     missing = [str(p) for p in pdfs if not p.with_suffix(".txt").is_file()]
