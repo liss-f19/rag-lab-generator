@@ -1,0 +1,414 @@
+--- page 1 ---
+
+IPv4 Addressing
+Marek Kozłowski
+Faculty of Mathematics and Information Sciences
+Warsaw University of Technology
+Warsaw, 2023/2024
+
+--- page 2 ---
+
+Contents
+1 IP Address Types
+2 IP Address Structure
+3 IP Network Numbers
+4 Special Purpose IP Addresses
+5 Address Resolution Protocol
+6 References
+
+--- page 3 ---
+
+Outline of the lecture
+1 IP Address Types
+2 IP Address Structure
+3 IP Network Numbers
+4 Special Purpose IP Addresses
+5 Address Resolution Protocol
+6 References
+
+--- page 4 ---
+
+IP Address Types
+IPv4 recipient’s address may be a:
+unicast,
+broadcast,
+multicast.
+Additionally in IPv6 so-called anycasts have been introduced1.
+1There will be a separate presentation on IPv6.
+
+--- page 5 ---
+
+Unicast
+Represents a single destination.
+In some implementations a single logical interface can have
+assigned several IP addresses2 from the same or different
+networks3.
+ARP protocol translates IP addresses in the local network to
+MAC addresses.
+Important: interface MAC addresses (OUIs) always have the
+first byte even!
+2See: man ip-address .
+3Several logical networks over a single physical segment.
+
+--- page 6 ---
+
+Broadcast
+Represents all hosts of the network.
+For security reasons routers block outgoing broadcasts so the
+destination network is always local.
+Recipient’s MAC address for a broadcast is always set to:
+FF-FF-FF-FF-FF-FF.
+
+--- page 7 ---
+
+Multicast
+Delivered to all hosts that participate in some service (e.g.
+routing, media broadcasting etc).
+A multicast group may contain hosts from several networks in a
+single area.
+First octets of multicast MAC addresses are odd (increased by 1).
+
+--- page 8 ---
+
+Multicast MAC - Example
+OUI identifier for IEEE 802.1 is 00-80-C2.
+IEEE 802.1 multicasts start with 01-80-C2.
+Destination MAC address for BPDU packets (IEEE 802.1d) is
+01-80-C2-00-00-00.
+
+--- page 9 ---
+
+Outline of the lecture
+1 IP Address Types
+2 IP Address Structure
+3 IP Network Numbers
+4 Special Purpose IP Addresses
+5 Address Resolution Protocol
+6 References
+
+--- page 10 ---
+
+IP Address Structure
+Written in the form: byte.byte.byte.byte .
+Globally unique4.
+Specifies the network number and the host number inside this
+network.
+First n bits(!) denote the network number and next (32 −n) bits
+– host number.
+All hosts within a network must have the same network number.
+4Except so-called private addresses – see next chapters.
+
+--- page 11 ---
+
+Excluded Host Numbers
+Addresses with all host bits equal to 0 denote network numbers.
+The phrases: ’network 10.0.0.0’ and ’network 10’ are equivalent.
+Addresses with all host bits equal to 1 are broadcast addresses
+for their networks.
+The address 255.255.255.255 is called a limited broadcast and it
+is a local network broadcast.
+
+--- page 12 ---
+
+Outline of the lecture
+1 IP Address Types
+2 IP Address Structure
+3 IP Network Numbers
+4 Special Purpose IP Addresses
+5 Address Resolution Protocol
+6 References
+
+--- page 13 ---
+
+History of Network Numbering
+1 ARPANET: 1-byte network number and 3-byte host identifier.
+2 Classful addressing: first byte of the IP address defines how
+many bytes belong to the network part.
+3 CIDR (Classless Inter-Domain Routing) based on the VLSM
+(Variable Length Subnet Mask) allows specifying explicitly how
+many first bits(!) identify the network.
+
+--- page 14 ---
+
+IP Address Classes (RFC 791)
+class
+1st byte
+addresses
+notes
+A
+0. . .
+1-127.x.x.x
+one byte net number
+B
+10. . .
+128-191.x.x.x
+two bytes net number
+C
+110. . .
+191-223.x.x.x
+three bytes net number
+D
+1110. . .
+224-239.x.x.x
+multicast addresses
+E
+1111. . .
+240-255.x.x.x
+excluded from the address space
+
+--- page 15 ---
+
+Advantages of IP Address Classes
+variable-size networks (254 hosts, 64k hosts, 16M hosts)
+number of uniquely identified networks extended to 2M
+
+--- page 16 ---
+
+Variable Length Subnet Mask (RFC 950)
+32-bit mask associated with every IP address; first n bits are
+equal to 1 and next (32 −n) are equal to 05. Octets of the mask
+are dot-separated and denoted using decimal or hexadecimal
+notations.
+net number = (IP address) AND (mask)
+host number = (IP address) AND (NOT(mask))
+Default masks are as follows:
+for A class addresses: FF.00.00.00 (255.0.0.0)
+for B class addresses: FF.FF.00.00 (255.255.0.0)
+for C class addresses: FF.FF.FF.00 (255.255.255.0)
+5We say that the mask is n bits long.
+
+--- page 17 ---
+
+Determining Net Numbers – Example
+IP10
+148
+91
+25
+5
+mask16
+FF
+FF
+F8
+0
+IP2
+10010100
+01011011
+00011001
+00000101
+mask2
+11111111
+11111111
+11111000
+00000000
+net2
+10010100
+01011011
+00011000
+00000000
+net10
+148
+91
+24
+0
+
+--- page 18 ---
+
+Advantages of VLSM
+networks can be further divided into subnets
+more efficient use of IP address space (for 256 hosts we use a
+23-bit long mask rather than a whole B class range)
+
+--- page 19 ---
+
+Routing
+Hosts don’t know masks / network numbers for other networks.
+Datagram headers contain addresses but no masks / network
+number information.
+For local deliveries packets are send directly.
+For non-local deliveries routers are responsible for finding proper
+routes to remote destinations and passing datagrams along them.
+Packet routing is fully transparent to both senders and recipients.
+
+--- page 20 ---
+
+Local vs Remote Recipient
+Let the sender’s mask is n bits long.
+The sender compares n first bits of its own and destination
+addresses:
+the same – recipient belongs to the same network (local delivery),
+different – recipient belongs to a remote network (frames should
+be addressed to the router).
+
+--- page 21 ---
+
+Classless Inter-Domain Routing (RFC 1518, 4632)
+Simplifies routing thanks to prefix aggregation. There are single
+entries for destinations with the same first bits (blocks).
+Can be used for representing VLSM addresses.
+Address shown in the CIDR format consists of the IP address
+followed by slash and the number describing CIDR block length.
+For interface addresses CIDR block lengths are equal to mask
+lengths.
+
+--- page 22 ---
+
+Telephone Numbers – Analogy
++48
+22
+234
+7
+988
+Poland
+Warsaw
+WUT
+MiNI
+Dean’s Office
+
+--- page 23 ---
+
+CIDR – Example
+Prefix sub-delegation:
+IANA grants 74.0.0.0/8 to RIPE,
+RIPE gives 74.64.0.0/10 to Telekomunikacja Rurytańska S.A.,
+Telekomunikacja Rurytańska S.A. sub-delegates 74.65.160.0/20
+to Sokhatshev Internet Providers,
+Tania Sieć Osiedlowa obtains 74.65.161.0/24 from Sokhatshev
+Internet Providers.
+Let’s assume a packet addressed to 74.65.161.63. External routers
+need to know only the route to 74.64.0.0/10 border routers. No
+knowledge about further sub-delegation / route is necessary
+outside this block.
+
+--- page 24 ---
+
+Subnet Numbering
+IPs are global while subnets are local.
+Keeping 0s close to the network-host dividing point as long as
+possible is recommended. It allows further mask lengthening or
+shortening while keeping IPs unchanged.
+Subsequent 24-bit subnets for the CIDR block 148.81/16 (B) will
+be then numbered in sequence:
+subnet
+3rd byte decimal
+148.81.128/24
+1000 0000
+148.81.64/24
+0100 0000
+148.81.192/24
+1100 0000
+148.81.32/24
+0010 0000
+148.81.160/24
+1010 0000
+
+--- page 25 ---
+
+Outline of the lecture
+1 IP Address Types
+2 IP Address Structure
+3 IP Network Numbers
+4 Special Purpose IP Addresses
+5 Address Resolution Protocol
+6 References
+
+--- page 26 ---
+
+Loopback
+The network 127/8 is called a loopback.
+Local host is associated with any 127.x.x.x address.
+The 127.0.0.1 address is resolved to the name localhost and it is
+bound to the lo pseudo-interface.
+Purpose:
+testing TCP/IP stack,
+using TCP/IP applications on isolated computers.
+
+--- page 27 ---
+
+Private IP Addresses (RFC 1918)
+Following blocks are excluded from the public address apace:
+CIDR block
+range
+class
+10.0.0.0/8
+10.0.0.0 – 10.255.255.255
+one A class
+172.16.0.0/12
+172.16.0.0 – 172.31.255.255
+16 B classes
+192.168.0.0/16
+192.168.0.0 – 192.168.255.255
+256 C classes
+Used in private client networks with IP masquerading for
+outgoing datagrams.
+
+--- page 28 ---
+
+Zeroconf (RFC 3927) and Other Reserved Blocks
+(RFC 6890)
+Interfaces not configured statically nor dynamically (for example
+via the DHCP protocol) are configured automatically with the
+169.254/16 prefix.
+Informational document RFC 6890 lists some other blocks
+excluded from the public address space by the IANA. Some of
+them – reserved for experimental purposes – rejoin the public
+address space thereafter.
+
+--- page 29 ---
+
+Outline of the lecture
+1 IP Address Types
+2 IP Address Structure
+3 IP Network Numbers
+4 Special Purpose IP Addresses
+5 Address Resolution Protocol
+6 References
+
+--- page 30 ---
+
+Address Resolution Protocol
+Having a destination IP we need destination MAC for:
+the recipient (local delivery),
+the router (remote delivery).
+ARP broadcasts are sent for that purpose and unicast replies are
+expected.
+ARP replies (IP to MAC mappings) may be cached.
+ARP is an extremely unsafe protocol. Alternatively static
+mappings can be defined on a host.
+
+--- page 31 ---
+
+Outline of the lecture
+1 IP Address Types
+2 IP Address Structure
+3 IP Network Numbers
+4 Special Purpose IP Addresses
+5 Address Resolution Protocol
+6 References
+
+--- page 32 ---
+
+IETF
+Internet Engineering Task Force (http://www.ietf.org)
+publishes RFC documents (Request For Comments,
+http://www.rfc-editor.org).
+RFC’s may have formally different status, for example:
+standard,
+standard proposal,
+best current practice,
+informational.
+but always should be considered a reference point.
+
+--- page 33 ---
+
+IANA
+Internet Assigned Numbers Authority (http://www.iana.org)
+administrates:
+multicast addresses,
+short CIDR blocks delegated to RIRs (Regional Internet
+Registries):
+RIPE (Europe, Middle East, Asia),
+ARIN (North America),
+APNIC (Asia and Pacific),
+LACNIC (South America),
+AfriNIC.
+and all other number assignments.

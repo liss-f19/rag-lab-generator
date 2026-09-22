@@ -1,0 +1,79 @@
+{
+  "lab_id": "sop1/l1",
+  "course": "sop1",
+  "slug": "l1_filesystem",
+  "generated_at": "2026-09-22T09:14:50.634863",
+  "sources": [
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l1/l1-1.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l1_filesystem/src/l1-1.c",
+      "sha256": "dbe877969f4e930ca550418bdd4222cc17b1213f31b43f07ccd09e98558f03a8",
+      "fetched_at": "2026-09-22T09:14:50.622718"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l1/l1-2.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l1_filesystem/src/l1-2.c",
+      "sha256": "be3dbe73d711d51d36cdf94f6ed167837e68f224f39c5673796f44847c71a53e",
+      "fetched_at": "2026-09-22T09:14:50.622821"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l1/l1-3.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l1_filesystem/src/l1-3.c",
+      "sha256": "3dbbbfd2f570119b781fd29d6d89285bd38da90b6386b8012fb2caba1ba3d6af",
+      "fetched_at": "2026-09-22T09:14:50.622917"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l1/prog12.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l1_filesystem/src/prog12.c",
+      "sha256": "159b5eadef87979e4671f051964ef71a7b6d967585a5dc279e494d872387b56f",
+      "fetched_at": "2026-09-22T09:14:50.623020"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l1/prog13.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l1_filesystem/src/prog13.c",
+      "sha256": "f082d48f9629c113cdaf736782a595264c0a60f6b8946e2b362df8d03d233cc0",
+      "fetched_at": "2026-09-22T09:14:50.623118"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l1/prog14.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l1_filesystem/src/prog14.c",
+      "sha256": "388f47c9829cdc7a3bfdf2d3c2c1a168d584fcedebe931f11475c387f7ab1a33",
+      "fetched_at": "2026-09-22T09:14:50.623210"
+    }
+  ],
+  "slides": [
+    "sop1_w2__FS_interface_0.pdf",
+    "sop1_w2__FS_interface_0.txt",
+    "sop1_w2__IO_1_15.pdf",
+    "sop1_w2__IO_1_15.txt",
+    "sop1_w2__IO_2_4.pdf",
+    "sop1_w2__IO_2_4.txt",
+    "sop1_w2__OPS1_Filesystem_API.pdf",
+    "sop1_w2__OPS1_Filesystem_API.txt",
+    "sop1_w2__POSIX_excerpts.pdf",
+    "sop1_w2__POSIX_excerpts.txt",
+    "sop1_w2__index.md"
+  ],
+  "extra": [
+    "04-lab-streams.pdf",
+    "04-lab-streams.txt",
+    "04-streams.pdf",
+    "04-streams.txt",
+    "05-lab-users.pdf",
+    "05-lab-users.txt",
+    "05-users.pdf",
+    "05-users.txt",
+    "06-files.pdf",
+    "06-files.txt",
+    "06-lab-files.pdf",
+    "06-lab-files.txt"
+  ],
+  "src": [
+    "l1-1.c",
+    "l1-2.c",
+    "l1-3.c",
+    "prog12.c",
+    "prog13.c",
+    "prog14.c"
+  ]
+}

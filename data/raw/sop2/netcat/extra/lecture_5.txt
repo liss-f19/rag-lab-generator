@@ -1,0 +1,402 @@
+--- page 1 ---
+
+TCP/IP Diagnostics Basics
+Marek Kozłowski
+Faculty of Mathematics and Information Sciences
+Warsaw University of Technology
+Warsaw, 2023/2024
+
+--- page 2 ---
+
+Contents
+1 Internet Control Message Protocol
+2 Commands and Utilities
+Interfaces and Addresses
+Name Resolution
+Host Connectivity
+Packet Analyzers and Injectors
+
+--- page 3 ---
+
+Outline of the lecture
+1 Internet Control Message Protocol
+2 Commands and Utilities
+Interfaces and Addresses
+Name Resolution
+Host Connectivity
+Packet Analyzers and Injectors
+
+--- page 4 ---
+
+Internet Control Message Protocol (RFC 792)
+defined in the RFC 792
+provides control mechanisms for the IP
+in case of IP datagram delivery problems respective ICMP
+notifications may be sent to the sender
+ICMP messages don’t have to be delivered; in fact most
+administrators filter them out for security reasons
+
+--- page 5 ---
+
+ICMP Position in the TCP/IP Stack
+According to the RFC 792:
+ICMP, uses the basic support of IP as if it were a higher
+level protocol, however, ICMP is actually an integral part of
+IP, and must be implemented by every IP module.
+Most analyzers show ICMP headers as upper layer headers,
+analogously to TCP or UDP headers (protocol: 1).
+In fact ICMP headers replace IP headers i.e. extend them with
+additional fields.
+
+--- page 6 ---
+
+ICMP header
+(IP header)
+Type (1B)
+Code (1B)
+Checksum (2B)
+other fields depending on the message type
+
+--- page 7 ---
+
+ICMP Header Parameters
+Type – the reason for the IP packet delivery failure, selected
+values:
+8 and 0 – Echo Request/Reply,
+3 – Destination Unreachable,
+5 – Redirect Message,
+11 – TTL Exceeded,
+12 – Parameter Problem.
+Code – more details on the problem; defined for any type
+separately.
+Checksum – analogous to similar fields in headers previously
+introduced. Calculated for 16-bit word of ICMP headers
+(beginning from the type field).
+
+--- page 8 ---
+
+ICMP Echo Request/Reply
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Type
+Code
+Checksum
+Identifier
+Sequence Number
+Data
+Ping packets.
+Type: Request – 8, Reply – 0.
+Echo packets have the code set to 0.
+Identifiers and sequence numbers allow matching requests and
+replies. The RFC 792 doesn’t define any algorithm for setting
+those values.
+The RFC 792 doesn’t define the data field content, it only states
+that the data in Requests and Replies must be the same.
+
+--- page 9 ---
+
+ICMP Destination Unreachable (Type 3)
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Type
+Code
+Checksum
+Unused
+IP header + first 64 bits of original datagram
+Codes identify reasons for not delivering packets. The RFC 792
+defines 6 values:
+0 – Network unreachable,
+1 – Host unreachable,
+2 – Protocol unreachable,
+3 – Port unreachable,
+4 – Fragmentation needed and DF set,
+5 – Source route failed error.
+
+--- page 10 ---
+
+ICMP Destination Unreachable
+Later RFCs (1122 and 1812) define 6-15 codes:
+6 – Destination network unknown,
+7 – Destination host unknown,
+8 – Source host isolated (not used),
+9 – Destination network administratively prohibited,
+10 – Destination host administratively prohibited,
+11 – Destination network unreachable for ToS,
+12 – Destination host unreachable for ToS,
+13 – Communication administratively prohibited by filtering,
+14 – Host precedence violation,
+15 – Precedence cutoff in effect.
+
+--- page 11 ---
+
+ICMP Redirect Message (Type 5)
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Type
+Code
+Checksum
+Address
+IP header + first 64 bits of original datagram
+Incorrect gateway selected for packet delivery.
+Allowed code values are:
+0 – Redirect for network,
+1 – Redirect for host,
+2 – Redirect for ToS and network,
+3 – Redirect for ToS and host.
+Address field contains the IP address of the proper gateway.
+
+--- page 12 ---
+
+ICMP TTL Exceeded (Type 11)
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Type
+Code
+Checksum
+Unused
+IP header + first 64 bits of original datagram
+Time to live reached 0.
+Two values of the code field are allowed:
+0 – TTL reached 0 when an IP packed crossed the router,
+1 – TTL reached 0 during IP packet defragmentation.
+
+--- page 13 ---
+
+ICMP Parameter Problem (Type 12)
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Type
+Code
+Checksum
+Pointer
+Unused
+IP header + first 64 bits of original datagram
+Incorrect header value. Pointer identifies the octet where the
+error was detected.
+Code – 0.
+The code value of 1 is allowed (RFC ?) and indicates lack of
+required option. For such ICMP packets the Pointer field is not
+used.
+
+--- page 14 ---
+
+Outline of the lecture
+1 Internet Control Message Protocol
+2 Commands and Utilities
+Interfaces and Addresses
+Name Resolution
+Host Connectivity
+Packet Analyzers and Injectors
+
+--- page 15 ---
+
+Basic Commands – arp
+available in Unix/Linux and Windows
+displays / modifies ARP cache tables
+static mappings (/etc/ethers) allow elimination of the ARP
+protocol
+
+--- page 16 ---
+
+Basic Commands – ifconfig
+available in Unix/Linux1 (in Windows: ipconfig)
+viewing and online modifying interface configuration
+can be also used for ethernet settings
+for wireless settings numerous commands do exist:
+iwconfig iwlist, iwspy (Linux)
+ifconfig (BSD)
+wificonfig (Solaris)
+1In some Linux distros not by default, net-tools or similar package has to be
+installed
+
+--- page 17 ---
+
+Basic Commands – netstat
+available in Unix/Linux and Windows
+allows:
+viewing protocols and interfaces details
+viewing routing tables (modifying by the route command)
+viewing TCP sessions and their states (ESTABLISHED,
+SYN SENT, SYN RECV, FIN WAIT1, FIN WAIT2,
+TIME WAIT, CLOSED, CLOSE WAIT, LAST ACK, LISTEN,
+CLOSING, UNKNOWN)
+viewing open UDP ports
+. . .
+
+--- page 18 ---
+
+Iproute2 Tools
+available in Linux only2!
+intended as a replacement for numerous network commands
+(ifconfig, arp, route etc) with a single command: ip (ip link, ip
+address, ip neighbour, ip route etc)
+introduces uniform syntax for all usages
+allows binding many IP addresses to a single interface
+2Default in some dostros.
+
+--- page 19 ---
+
+ip Commands – Examples
+viewing ARP cache
+$ arp
+$ ip neighbour show
+interface information
+$ ifconfig eth0
+$ ip address show dev eth0
+displaying routing table
+$ netstat -r
+$ route
+$ ip route show
+
+--- page 20 ---
+
+ip – Advanced Use
+several IPs assigned to a single interface
+# ip address add 10.0.0.1/8 broadcast + dev eth0
+# ip address add 172.16.1.1/16 broadcast + dev eth0
+$ ip address show dev eth0
+$ ifconfig
+NAT (details on the next lecture)
+# ip route add nat 194.29.178.1 via 192.168.1.1
+# ip rule add nat 194.29.178.1 from 192.168.1.1
+# ip route flush cache
+$ ip route show
+$ ip rule show
+
+--- page 21 ---
+
+Name Resolution – nslookup
+available in Unix/Linux
+resolves names to IPs (A, CNAME records), IPs to names (PTR
+records) and others
+alternative tools: host, dig
+in case no name server is specified the default configuration is
+used (/etc/resolv.conf file)
+
+--- page 22 ---
+
+Host Connectivity – ping
+available in Linux/Unix and Windows
+sends ICMP ECHO REQUEST packets and expects
+ECHO REPLY packets from the destination
+based on replies estimates delays and packet loss
+many administrators filter ICMP packets (including ICMP
+ECHO) on routers so lack of ping replies doesn’t imply
+communication problems
+
+--- page 23 ---
+
+Pinging the loopback
+Pinging loopback addresses (127.0.0.0/8) helps ensure that the
+TCP/IP stack works correctly.
+Reminder: Every TCP/IP host corresponds to any 127/8
+address and the name localhost should be assigned with the
+address: 127.0.0.1:
+/etc/hosts (Unix/Linux)
+C:\Windows\System32\drivers\etc\hosts (Windows)
+
+--- page 24 ---
+
+Host Connectivity – traceroute
+available in Unix/Linux (in Windows: tracert)
+sends series of UDP packets to port 33434 of the destination3
+with TTL values set to 1, 2, 3, . . . and analyzes ICMP
+TIME EXCEEDED notifications from routers
+based on replies tries to estimate packet routes and delays at
+hops
+both UDP packets addressed to the port 33434 and ICMP
+packets can be filtered out at border routers so lack of replies
+doesn’t imply communication problems
+3Usually sending packets to different port or ICMP ECHO packets is possible.
+
+--- page 25 ---
+
+Host Connectivity – arping
+similar to ping except it works on the 2nd OSI layer (MAC)
+two different, incompatible implementations do exist:
+1 developed by Thomas Habets, uses libpcap library and is portable
+2 part of the iputils package
+
+--- page 26 ---
+
+Packet Analyzers
+API for programs used throughout this course is provided by the
+pcap. Respective Linux/Unix library is called libpcap. The
+Windows port is a WinPcap. Pcap is utilized by the following
+tools:
+tcpdump (Windows – WinDump, Solaris – snoop),
+wireshark,
+nmap
+arping (Habets),
+snort (Network Intruder Detection System).
+Using pcap requires setting network interface cards in so-called
+promiscuous mode which can be done only by superusers (root,
+administrator, etc.)
+
+--- page 27 ---
+
+Packet Analyzer – tcpdump
+pcap-filter expression syntax – the same as capture filter in wireshark
+Save ESMTP packets exchanged between this host and hosts from other
+networks to plik.pcap
+# tcpdump ’(not net 194.29.178.0/24 or host 194.29.178.22) and \
+(port 25 or 465 or 587)’ -w file.pcap
+Save incoming TCP packet with SYN or FIN flags . . .
+# tcpdump ’dst 194.29.178.22 and \
+(tcp[tcpflags] & (tcp-syn|tcp-fin) != 0)’ -w file.pcap
+. . . or just display first 64 bytes decoded
+# tcpdump ’dst 194.29.178.22 and \
+(tcp[tcpflags] & (tcp-syn|tcp-fin) != 0)’ -n -vv -s64
+
+--- page 28 ---
+
+Port Scanner – nmap
+available in Unix/Linux and Windows
+allows host detection (ping) and various techniques for
+OS identification
+port scanning
+package modification on network devices may distort results
+comprehensive nmap documentation at the project homepage:
+http://www.insecure.org/ (http://www.nmap.org)
+
+--- page 29 ---
+
+Packet Injectors – nemesis, scapy
+available in Unix/Linux and Windows
+allow direct packet creation that baypasses data encapsulation by
+stack protocols
+command line: nemesis (https://nemesis.sourceforge.net)
+than can create and inject any custom arp, dns, ethernet, icmp,
+igmp, ip, ospf, rip, tcp or udp packets
+python programmers may be interested in scapy
+(https://scapy.net)

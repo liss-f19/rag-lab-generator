@@ -13,6 +13,26 @@ jobs:
     name: build
     runs-on: ubuntu-latest
 
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: rag
+          POSTGRES_PASSWORD: rag
+          POSTGRES_DB: raglab
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U rag -d raglab"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://rag:rag@localhost:5433/raglab
+      LLM_PROVIDER: fake
+      EMBEDDING_PROVIDER: fake
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,13 +47,22 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --locked
+        run: uv sync --locked --extra ingest --extra serve
 
       - name: Run pre-commit
         run: uv run pre-commit run --all-files
 
-      - name: Run tests
-        run: uv run pytest
+      - name: Type check
+        run: uv run mypy src
+
+      - name: Apply database schema
+        run: uv run rag-lab db-init
+
+      - name: Run unit tests
+        run: uv run pytest -m "not integration"
+
+      - name: Run integration tests
+        run: uv run pytest -m integration
 
       - name: Build Docker image
         run: docker build -t rag-lab-generator .

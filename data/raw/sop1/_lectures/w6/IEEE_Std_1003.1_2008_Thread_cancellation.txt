@@ -1,0 +1,654 @@
+--- page 1 ---
+
+General Information
+Threads
+TSP
+defined for SCHED_FIFO, SCHED_RR,
+and SCHED_SPORADIC shall be used in an
+implementation-defined manner. Each thread with system scheduling contention scope
+competes for the processors in its scheduling allocation domain in an implementation-defined
+manner according to its priority. Threads with process scheduling contention scope are
+scheduled relative to other threads within the same scheduling contention scope in the process.
+TSP
+If _POSIX_THREAD_SPORADIC_SERVER is defined, the rules defined for SCHED_SPORADIC
+in Scheduling Policies (on page 501) shall be used in an implementation-defined manner for
+application threads whose scheduling allocation domain size is greater than one.
+Scheduling Documentation
+If _POSIX_PRIORITY_SCHEDULING is defined, then any scheduling policies beyond
+TSP
+SCHED_OTHER, SCHED_FIFO, SCHED_RR, and SCHED_SPORADIC, as well as the effects of
+the scheduling policies indicated by these other values, and the attributes required in order to
+support such a policy, are implementation-defined. Furthermore, the implementation shall
+document the effect of all processor scheduling allocation domain values supported for these
+policies.
+2.9.5 
+Thread Cancellation
+The thread cancellation mechanism allows a thread to terminate the execution of any other
+thread in the process in a controlled manner. The target thread (that is, the one that is being
+canceled) is allowed to hold cancellation requests pending in a number of ways and to perform
+application-specific cleanup processing when the notice of cancellation is acted upon.
+Cancellation is controlled by the cancellation control functions. Each thread maintains its own
+cancelability state. Cancellation may only occur at cancellation points or when the thread is
+asynchronously cancelable.
+The thread cancellation mechanism described in this section depends upon programs having set
+deferred cancelability state, which is specified as the default. Applications shall also carefully
+follow static lexical scoping rules in their execution behavior. For example, use of setjmp( ),
+return, goto, and so on, to leave user-defined cancellation scopes without doing the necessary
+scope pop operation results in undefined behavior.
+Use of asynchronous cancelability while holding resources which potentially need to be released
+may result in resource loss. Similarly, cancellation scopes may only be safely manipulated
+(pushed and popped) when the thread is in the deferred or disabled cancelability states.
+2.9.5.1 
+Cancelability States
+The cancelability state of a thread determines the action taken upon receipt of a cancellation
+request. The thread may control cancellation in a number of ways.
+Each thread maintains its own cancelability state, which may be encoded in two bits:
+1. Cancelability-Enable: When cancelability is PTHREAD_CANCEL_DISABLE (as defined
+in the Base Definitions volume of POSIX.1-2008, <pthread.h>), cancellation requests
+against the target thread are held pending. By default, cancelability is set to
+PTHREAD_CANCEL_ENABLE (as defined in <pthread.h>).
+2. Cancelability Type: When cancelability is enabled and the cancelability type is
+PTHREAD_CANCEL_ASYNCHRONOUS (as defined in <pthread.h>), new or pending
+cancellation requests may be acted upon at any time. When cancelability is enabled and
+the cancelability type is PTHREAD_CANCEL_DEFERRED (as defined in <pthread.h>),
+Vol. 2: System Interfaces, Issue 7
+Copyright © 2001-2008, IEEE and The Open Group. All rights reserved. 
+511
+17643
+17644
+17645
+17646
+17647
+17648
+17649
+17650
+17651
+17652
+17653
+17654
+17655
+17656
+17657
+17658
+17659
+17660
+17661
+17662
+17663
+17664
+17665
+17666
+17667
+17668
+17669
+17670
+17671
+17672
+17673
+17674
+17675
+17676
+17677
+17678
+17679
+17680
+17681
+17682
+17683
+17684
+17685
+Authorized licensed use limited to: POLITECHNIKI WARSZAWSKIEJ. Downloaded on March 19,2016 at 10:03:44 UTC from IEEE Xplore.  Restrictions apply.
+
+--- page 2 ---
+
+Threads 
+General Information
+cancellation requests are held pending until a cancellation point (see below) is reached. If
+cancelability is disabled, the setting of the cancelability type has no immediate effect as all
+cancellation requests are held pending; however, once cancelability is enabled again the
+new type is in effect. The cancelability type is PTHREAD_CANCEL_DEFERRED in all
+newly created threads including the thread in which main( ) was first invoked.
+2.9.5.2 
+Cancellation Points
+Cancellation points shall occur when a thread is executing the following functions:
+accept( )
+aio_suspend( )
+clock_nanosleep( )
+close( )
+connect( )
+creat( )
+fcntl( )†
+fdatasync( )
+fsync( )
+getmsg( )
+getpmsg( )
+lockf( )††
+mq_receive( )
+mq_send( )
+mq_timedreceive( )
+mq_timedsend( )
+msgrcv( )
+msgsnd( )
+msync( )
+nanosleep( )
+open( )
+openat( )
+pause( )
+poll( )
+pread( )
+pselect( )
+pthread_cond_timedwait( )
+pthread_cond_wait( )
+pthread_join( )
+pthread_testcancel( )
+putmsg( )
+putpmsg( )
+pwrite( )
+read( )
+readv( )
+recv( )
+recvfrom( )
+recvmsg( )
+select( )
+sem_timedwait( )
+sem_wait( )
+send( )
+sendmsg( )
+sendto( )
+sigsuspend( )
+sigtimedwait( )
+sigwait( )
+sigwaitinfo( )
+sleep( )
+system( )
+tcdrain( )
+wait( )
+waitid( )
+waitpid( )
+write( )
+writev( )
+†
+When the cmd argument is F_SETLKW.
+††
+When the function argument is F_LOCK.
+512 
+Copyright © 2001-2008, IEEE and The Open Group. All rights reserved. 
+Vol. 2: System Interfaces, Issue 7
+17686
+17687
+17688
+17689
+17690
+17691
+17692
+17693
+17694
+17695
+17696
+17697
+17698
+17699
+17700
+17701
+17702
+17703
+17704
+17705
+17706
+17707
+17708
+17709
+17710
+17711
+17712
+17713
+Authorized licensed use limited to: POLITECHNIKI WARSZAWSKIEJ. Downloaded on March 19,2016 at 10:03:44 UTC from IEEE Xplore.  Restrictions apply.
+
+--- page 3 ---
+
+General Information
+Threads
+A cancellation point may also occur when a thread is executing the following functions:
+access( )
+asctime( )
+asctime_r( )
+catclose( )
+catgets( )
+catopen( )
+chmod( )
+chown( )
+closedir( )
+closelog( )
+ctermid( )
+ctime( )
+ctime_r( )
+dbm_close( )
+dbm_delete( )
+dbm_fetch( )
+dbm_nextkey( )
+dbm_open( )
+dbm_store( )
+dlclose( )
+dlopen( )
+dprintf( )
+endgrent( )
+endhostent( )
+endnetent( )
+endprotoent( )
+endpwent( )
+endservent( )
+endutxent( )
+faccessat( )
+fchmod( )
+fchmodat( )
+fchown( )
+fchownat( )
+fclose( )
+fcntl( )†
+fflush( )
+fgetc( )
+fgetpos( )
+fgets( )
+fgetwc( )
+fgetws( )
+fmtmsg( )
+fopen( )
+fpathconf( )
+fprintf( )
+fputc( )
+fputs( )
+fputwc( )
+fputws( )
+fread( )
+freopen( )
+fscanf( )
+fseek( )
+fseeko( )
+fsetpos( )
+fstat( )
+fstatat( )
+ftell( )
+ftello( )
+ftw( )
+futimens( )
+fwprintf( )
+fwrite( )
+fwscanf( )
+getaddrinfo( )
+getc( )
+getc_unlocked( )
+getchar( )
+getchar_unlocked( )
+getcwd( )
+getdate( )
+getdelim( )
+getgrent( )
+getgrgid( )
+getgrgid_r( )
+getgrnam( )
+getgrnam_r( )
+gethostent( )
+gethostid( )
+gethostname( )
+getline( )
+getlogin( )
+getlogin_r( )
+getnameinfo( )
+getnetbyaddr( )
+getnetbyname( )
+getnetent( )
+getopt( )††
+getprotobyname( )
+getprotobynumber( )
+getprotoent( )
+getpwent( )
+getpwnam( )
+getpwnam_r( )
+getpwuid( )
+getpwuid_r( )
+gets( )
+getservbyname( )
+getservbyport( )
+getservent( )
+getutxent( )
+getutxid( )
+getutxline( )
+getwc( )
+getwchar( )
+glob( )
+iconv_close( )
+iconv_open( )
+ioctl( )
+link( )
+linkat( )
+lio_listio( )
+localtime( )
+localtime_r( )
+lockf( )
+lseek( )
+lstat( )
+mkdir( )
+mkdirat( )
+mkdtemp( )
+mkfifo( )
+mkfifoat( )
+mknod( )
+mknodat( )
+mkstemp( )
+mktime( )
+nftw( )
+opendir( )
+openlog( )
+pathconf( )
+pclose( )
+perror( )
+popen( )
+posix_fadvise( )
+Vol. 2: System Interfaces, Issue 7
+Copyright © 2001-2008, IEEE and The Open Group. All rights reserved. 
+513
+17714
+17715
+17716
+17717
+17718
+17719
+17720
+17721
+17722
+17723
+17724
+17725
+17726
+17727
+17728
+17729
+17730
+17731
+17732
+17733
+17734
+17735
+17736
+17737
+17738
+17739
+17740
+17741
+17742
+17743
+17744
+17745
+17746
+17747
+17748
+17749
+17750
+17751
+17752
+17753
+17754
+17755
+17756
+17757
+17758
+17759
+Authorized licensed use limited to: POLITECHNIKI WARSZAWSKIEJ. Downloaded on March 19,2016 at 10:03:44 UTC from IEEE Xplore.  Restrictions apply.
+
+--- page 4 ---
+
+Threads 
+General Information
+posix_fallocate( )
+posix_madvise( )
+posix_openpt( )
+posix_spawn( )
+posix_spawnp( )
+posix_trace_clear( )
+posix_trace_close( )
+posix_trace_create( )
+posix_trace_create_withlog( )
+posix_trace_eventtypelist_getnext_id( )
+posix_trace_eventtypelist_rewind( )
+posix_trace_flush( )
+posix_trace_get_attr( )
+posix_trace_get_filter( )
+posix_trace_get_status( )
+posix_trace_getnext_event( )
+posix_trace_open( )
+posix_trace_rewind( )
+posix_trace_set_filter( )
+posix_trace_shutdown( )
+posix_trace_timedgetnext_event( )
+posix_typed_mem_open( )
+printf( )
+psiginfo( )
+psignal( )
+pthread_rwlock_rdlock( )
+pthread_rwlock_timedrdlock( )
+pthread_rwlock_timedwrlock( )
+pthread_rwlock_wrlock( )
+putc( )
+putc_unlocked( )
+putchar( )
+putchar_unlocked( )
+puts( )
+pututxline( )
+putwc( )
+putwchar( )
+readdir( )
+readdir_r( )
+readlink( )
+readlinkat( )
+remove( )
+rename( )
+renameat( )
+rewind( )
+rewinddir( )
+scandir( )
+scanf( )
+seekdir( )
+semop( )
+setgrent( )
+sethostent( )
+setnetent( )
+setprotoent( )
+setpwent( )
+setservent( )
+setutxent( )
+sigpause( )
+stat( )
+strerror( )
+strerror_r( )
+strftime( )
+symlink( )
+symlinkat( )
+sync( )
+syslog( )
+tmpfile( )
+tmpnam( )
+ttyname( )
+ttyname_r( )
+tzset( )
+ungetc( )
+ungetwc( )
+unlink( )
+unlinkat( )
+utime( )
+utimensat( )
+utimes( )
+vdprintf( )
+vfprintf( )
+vfwprintf( )
+vprintf( )
+vwprintf( )
+wcsftime( )
+wordexp( )
+wprintf( )
+wscanf( )
+An implementation shall not introduce cancellation points into any other functions specified in
+this volume of POSIX.1-2008.
+The side-effects of acting upon a cancellation request while suspended during a call of a function
+are the same as the side-effects that may be seen in a single-threaded program when a call to a
+function is interrupted by a signal and the given function returns [EINTR]. Any such side-
+effects occur before any cancellation cleanup handlers are called.
+Whenever a thread has cancelability enabled and a cancellation request has been made with that
+thread as the target, and the thread then calls any function that is a cancellation point (such as
+pthread_testcancel( ) or read( )), the cancellation request shall be acted upon before the function
+returns. If a thread has cancelability enabled and a cancellation request is made with the thread
+as a target while the thread is suspended at a cancellation point, the thread shall be awakened
+and the cancellation request shall be acted upon. It is unspecified whether the cancellation
+request is acted upon or whether the cancellation request remains pending and the thread
+resumes normal execution if:
+• The thread is suspended at a cancellation point and the event for which it is waiting occurs
+†
+For any value of the cmd argument.
+††
+If opterr is non-zero.
+514 
+Copyright © 2001-2008, IEEE and The Open Group. All rights reserved. 
+Vol. 2: System Interfaces, Issue 7
+17760
+17761
+17762
+17763
+17764
+17765
+17766
+17767
+17768
+17769
+17770
+17771
+17772
+17773
+17774
+17775
+17776
+17777
+17778
+17779
+17780
+17781
+17782
+17783
+17784
+17785
+17786
+17787
+17788
+17789
+17790
+17791
+17792
+17793
+17794
+17795
+17796
+17797
+17798
+17799
+17800
+17801
+17802
+17803
+17804
+17805
+17806
+Authorized licensed use limited to: POLITECHNIKI WARSZAWSKIEJ. Downloaded on March 19,2016 at 10:03:44 UTC from IEEE Xplore.  Restrictions apply.
+
+--- page 5 ---
+
+General Information
+Threads
+• A specified timeout expired
+before the cancellation request is acted upon.
+2.9.5.3 
+Thread Cancellation Cleanup Handlers
+Each thread maintains a list of cancellation cleanup handlers. The programmer uses the
+pthread_cleanup_push( ) and pthread_cleanup_pop( ) functions to place routines on and remove
+routines from this list.
+When a cancellation request is acted upon, or when a thread calls pthread_exit( ), the thread first
+disables cancellation by setting its cancelability state to PTHREAD_CANCEL_DISABLE and its
+cancelability type to PTHREAD_CANCEL_DEFERRED. The cancelability state shall remain set
+to PTHREAD_CANCEL_DISABLE until the thread has terminated. The behavior is undefined if
+a cancellation cleanup handler or thread-specific data destructor routine changes the
+cancelability state to PTHREAD_CANCEL_ENABLE.
+The routines in the thread’s list of cancellation cleanup handlers are invoked one by one in LIFO
+sequence; that is, the last routine pushed onto the list (Last In) is the first to be invoked (First
+Out). When the cancellation cleanup handler for a scope is invoked, the storage for that scope
+remains valid. If the last cancellation cleanup handler returns, thread-specific data destructors (if
+any) associated with thread-specific data keys for which the thread has non-NULL values will
+be run, in unspecified order, as described for pthread_key_create( ).
+After all cancellation cleanup handlers and thread-specific data destructors have returned,
+thread execution is terminated. If the thread has terminated because of a call to pthread_exit( ),
+the value_ptr argument is made available to any threads joining with the target. If the thread has
+terminated by acting on a cancellation request, a status of PTHREAD_CANCELED is made
+available to any threads joining with the target. The symbolic constant PTHREAD_CANCELED
+expands to a constant expression of type (void *) whose value matches no pointer to an object in
+memory nor the value NULL.
+A side-effect of acting upon a cancellation request while in a condition variable wait is that the
+mutex is re-acquired before calling the first cancellation cleanup handler. In addition, the thread
+is no longer considered to be waiting for the condition and the thread shall not have consumed
+any pending condition signals on the condition.
+A cancellation cleanup handler cannot exit via longjmp( ) or siglongjmp( ).
+2.9.5.4 
+Async-Cancel Safety
+The pthread_cancel( ), pthread_setcancelstate( ), and pthread_setcanceltype( ) functions are defined to
+be async-cancel safe.
+No other functions in this volume of POSIX.1-2008 are required to be async-cancel-safe.
+2.9.6 
+Thread Read-Write Locks
+Multiple readers, single writer (read-write) locks allow many threads to have simultaneous
+read-only access to data while allowing only one thread to have exclusive write access at any
+given time. They are typically used to protect data that is read more frequently than it is
+changed.
+One or more readers acquire read access to the resource by performing a read lock operation on
+the associated read-write lock. A writer acquires exclusive write access by performing a write
+lock operation. Basically, all readers exclude any writers and a writer excludes all readers and
+Vol. 2: System Interfaces, Issue 7
+Copyright © 2001-2008, IEEE and The Open Group. All rights reserved. 
+515
+17807
+17808
+17809
+17810
+17811
+17812
+17813
+17814
+17815
+17816
+17817
+17818
+17819
+17820
+17821
+17822
+17823
+17824
+17825
+17826
+17827
+17828
+17829
+17830
+17831
+17832
+17833
+17834
+17835
+17836
+17837
+17838
+17839
+17840
+17841
+17842
+17843
+17844
+17845
+17846
+17847
+17848
+Authorized licensed use limited to: POLITECHNIKI WARSZAWSKIEJ. Downloaded on March 19,2016 at 10:03:44 UTC from IEEE Xplore.  Restrictions apply.

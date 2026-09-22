@@ -1,0 +1,103 @@
+{
+  "lab_id": "sop1/l0",
+  "course": "sop1",
+  "slug": "l0_posix_environment",
+  "generated_at": "2026-09-22T09:14:50.619396",
+  "sources": [
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l0/prog1.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l0_posix_environment/src/prog1.c",
+      "sha256": "8eac3db5c27094e2d8f98ef1d4470603ff0a87b9f697d08262f887a0057d19ae",
+      "fetched_at": "2026-09-22T09:14:50.608595"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l0/prog2.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l0_posix_environment/src/prog2.c",
+      "sha256": "575d924cff703f60282a6e757ab725885028173948c58a71979be32e41fdb68c",
+      "fetched_at": "2026-09-22T09:14:50.608706"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l0/prog3.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l0_posix_environment/src/prog3.c",
+      "sha256": "d6f504cc45f585537c056d5ab9bad0f448eda2c145fb3ac7574e5c6372252f42",
+      "fetched_at": "2026-09-22T09:14:50.608808"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l0/prog4.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l0_posix_environment/src/prog4.c",
+      "sha256": "2f156d2ebcce94b5f8ce74d3bfc0217784af55ec936bbdcea62a102f4fcbd7e7",
+      "fetched_at": "2026-09-22T09:14:50.608900"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l0/prog5.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l0_posix_environment/src/prog5.c",
+      "sha256": "25a37aba2942016a896560954742f109b7a8123f9f4eb059ff1d8ce29609fa73",
+      "fetched_at": "2026-09-22T09:14:50.608988"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l0/prog6.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l0_posix_environment/src/prog6.c",
+      "sha256": "8eb273429df7f6c6f80115d8e9c0a9c5e0eed1fd71825d20e2257fde13b00ed4",
+      "fetched_at": "2026-09-22T09:14:50.609318"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l0/prog7.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l0_posix_environment/src/prog7.c",
+      "sha256": "ff1549b4e15aea701541ea099da59e7e2e260c3cc9b0c78217b27285304ec93a",
+      "fetched_at": "2026-09-22T09:14:50.609533"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l0/prog8.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l0_posix_environment/src/prog8.c",
+      "sha256": "e915d9118bba1c6abab67ec4b41161b3dbce2f89b7d955d70710970d8524cead",
+      "fetched_at": "2026-09-22T09:14:50.609638"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l0/tutorial.gcc_make.txt",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l0_posix_environment/src/tutorial.gcc_make.txt",
+      "sha256": "7ef7d288a5cd4fa7371e7a6e9d85a00c22b6d1449bc0dc5d0907a1d114740d65",
+      "fetched_at": "2026-09-22T09:14:50.609934"
+    }
+  ],
+  "slides": [
+    "sop1_w1__Intro_2.pdf",
+    "sop1_w1__Intro_2.txt",
+    "sop1_w1__OPS1_Introduction.pdf",
+    "sop1_w1__OPS1_Introduction.txt",
+    "sop1_w1__index.md"
+  ],
+  "extra": [
+    "00-basics.pdf",
+    "00-basics.txt",
+    "01-lab-unix.pdf",
+    "01-lab-unix.txt",
+    "01-unix.pdf",
+    "01-unix.txt",
+    "02-bash.pdf",
+    "02-bash.txt",
+    "02-lab-bash.pdf",
+    "02-lab-bash.txt",
+    "03-commands.pdf",
+    "03-commands.txt",
+    "03-lab-commands.pdf",
+    "03-lab-commands.txt",
+    "11-lab-bash.pdf",
+    "11-lab-bash.txt",
+    "bash1.sh",
+    "bash2.sh",
+    "bash3.sh",
+    "bash4.sh",
+    "tutorial.gcc_make.txt"
+  ],
+  "src": [
+    "prog1.c",
+    "prog2.c",
+    "prog3.c",
+    "prog4.c",
+    "prog5.c",
+    "prog6.c",
+    "prog7.c",
+    "prog8.c",
+    "tutorial.gcc_make.txt"
+  ]
+}

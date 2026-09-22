@@ -1,0 +1,520 @@
+--- page 1 ---
+
+Lecture 1 - Introduction
+Operating Systems 1
+Warsaw University of Technology - Faculty of Mathematics and Information Science
+
+--- page 2 ---
+
+What is an Operating
+System?
+an intermediary
+between a user the
+hardware
+There's no clear definition of the Operating System
+a resource
+allocator
+a program
+controlling other
+programs
+the kernel
+a basic software of
+the computer system
+
+--- page 3 ---
+
+Hardware
+Operating System
+Application Programs
+aka. userspace programs
+Users
+Layers of the computer system
+Users are running and using various programs running
+on the system
+Programs are using services and interfaces
+exposed by the operating system
+Operating system uses available hardware resources
+directly to do what is asked by the programs
+
+--- page 4 ---
+
+0x0000
+Hardware resources managed by the OS
+Memory
+User's task
+Kernel
+Free
+User's task
+0x1000
+0xFFFF
+CPU 1
+CPU 2
+CPU 3
+CPU 4
+User's task
+System
+service
+Idle
+User's task
+
+--- page 5 ---
+
+NIC (Network Interface Card)
+User Task 1
+msg
+msg
+transmission
+line
+Hardware resources managed by the OS
+User Task 2
+SSD drive
+User Task 1
+User Task 2
+write
+read
+
+--- page 6 ---
+
+Users, user groups, credentials, permissions
+Files, file attributes
+Clocks, timers
+System configuration
+create a new user
+file.txt
+User
+database
+set clock time
+change file
+attributes
+Logical resources managed by the OS
+...
+User Task 1
+CPU 1
+
+--- page 7 ---
+
+Memory
+User's task
+CPU 1
+A task might not need all the hardware
+Executing just a single task at a time is fairly simple for the OS (and wasteful)
+Kernel
+CPU 2
+User's task
+Idle
+Free
+It may need to wait for I/O like:
+- user input
+- incoming network data
+- data from a slow HDD
+
+--- page 8 ---
+
+multiprogramming
+where do I run?
+There might be more tasks
+than available CPUs!
+the OS has to provide job scheduling
+Allowing to run multiple tasks concurrently raises multiple issues
+CPU 1
+CPU 2
+CPU 3
+CPU 4
+User's task
+User's task
+User's task
+User's task
+A new task
+
+--- page 9 ---
+
+no space for me?
+There might not be enough memory
+for all tasks
+the OS has to provide main memory management
+Memory
+User's task
+Kernel
+Free
+User's task
+Free
+User's task
+A (large) new task
+
+--- page 10 ---
+
+me write()'s
+Tasks might try to share resources,
+in a conflicting way
+Filesystem
+file.txt
+me write()'s too
+delete() :)
+the OS has to protect all shared resources and provide
+a set of safe system calls to access them
+CPU 1
+CPU 2
+User's A
+task
+User's B
+task
+CPU 3
+User's C
+task
+
+--- page 11 ---
+
+Modes of operation
+off-line
+aka. batch
+soft RT
+Users request multiple tasks - it's up to the OS how to execute them
+on-line
+aka.
+interactive
+real-time
+hard RT
+
+--- page 12 ---
+
+In batch mode jobs are queued and executed one-by-one
+T6
+wait queue
+Users cannot execute programs directly
+but can request the OS add them to the queue.
+The queue can be prioritized.
+Tasks typically get full access to all available
+hardware resources to finish ASAP.
+This mode is frequently found in large
+High Performance Computing (HPC) clusters.
+T5
+T4
+T3
+T2
+CPU 1
+Batch Task
+1
+CPU 2
+Batch Task
+2
+Memory
+Batch Task 1
+Kernel
+Free
+
+--- page 13 ---
+
+In an on-line system (also multitasking/timesharing) , the OS
+switches between tasks running concurrently creating interactive computing
+CPU 1 time
+User Task A
+~20ms timeslice
+a context switch
+Task A needs
+to wait for I/O
+Task B didn't finish
+within it's timeslice
+The OS must be able to take the CPU from a running task and assign it to some other task
+preemption
+User Task B
+UT A
+User Task B
+
+--- page 14 ---
+
+In a real time system, there exists an upper bound on the system's reaction time
+to an external event
+time
+the vault door
+became open
+the system I/O
+card emits an
+alarm signal
+bound
+reaction time
+This mode is desired in mission-critical applications, i. e. in the transportation industry.
+Implementing such requires many restrictions. The OS must be aware of the precise
+characteristics of the running tasks - what resources would they ever need. This is
+unpredictable for a general purpose operating system.
+
+--- page 15 ---
+
+In a time sharing system tasks do share a single CPU core.
+This is a resource which requires protection!
+CPU1
+User Task A
+.L2:
+add DWORD PTR [rbp-4], 1
+mov edx, DWORD PTR [rbp-4]
+mov eax, edx
+add eax, eax
+add eax, edx
+mov DWORD PTR [rbp-4], eax
+jmp .L2
+User task B
+User Task C
+an infinite loop!
+
+--- page 16 ---
+
+How to do that considering how simple CPU is?
+1. fetch
+The CPU instruction cycle
+1. read next instruction from memory
+2. figure out what those bytes mean
+3. do what the instruction said to do
+I got 5 bytes: b8 04 00 00 00
+Okay, 0xb8 means move next byte (0x04)
+to the register EAX
+This is all hardcoded in hardware!
+It's what both OS code and user code only can do!
+(IP += sizeof(instruction))
+2. decode
+3. execute
+Configure the internal CPU buses,
+registers, switches, execute many small
+substeps ending with EAX = 4
+(4.) increment the Instruction Pointer (IP register)
+
+--- page 17 ---
+
+We need a way to execute something else from time to time.
+CPUs have such a mechanism - the interrupts!
+normal mode
+(1) interrupt
+(2) let's do
+something else
+interrupt
+mode
+(3) back to normal
+1. fetch
+2. decode
+3. execute
+
+--- page 18 ---
+
+CPU1
+IC
+timer
+i/o device
+INT0
+INT1
+INT2
+INT3
+Each CPU has an Interrupt Controller attached which triggers the mode switch
+The IC can enable, disable, queue and prioritize multiple interrupts occurring
+at the same time and deliver them to the CPU one-by-one.
+OS code configures the timer to fire an interrupt in a few milliseconds
+with a special instruction before jumping to the user code.
+hardware interrupt lines
+
+--- page 19 ---
+
+CPU1
+0xC002 mov
+0xC004 add
+0xC006 jmp
+0xC008 ...
+0xE072 0x000A
+0xE074 0x0001
+0xE076 0xC004
+0xE078 <uninit>
+Upon receiving an interrupt the CPU automatically:
+1. saves the Instruction Pointer on the stack
+2. sets the IP to the address of the first instruction
+of the interrupt handler code
+IP = 0xC004
+current
+instruction
+1. push the IP
+(0xC004)
+0. interrupt
+.stack
+.code
+IP value
+2. set the IP
+(0x0A08)
+0x0A08 mov
+0x0A0A lea
+0x0A0C mov
+0x0A0E ...
+local var
+func param
+.int_handler
+
+--- page 20 ---
+
+How does the CPU know the address of the interrupt handler?
+At a fixed address specified by the CPU the system (OS)
+keeps a table of interrupt handler addresses
+- the interrupt vector!
+AVR® Interrupts - simple example of a microcontroller interrupt vector memory layout
+https://developerhelp.microchip.com/xwiki/bin/view/products/mcu-mpu/8-bit-avr/structure/interrupts/
+0x0000 0x0A08
+0x0002 0x0A22
+0x0004 0x0A30
+...
+0x0A08 mov
+0x0A0A lea
+0x0A0E ...
+.int0_handler
+0x0A22 mov
+0x0A24 mov
+...
+.int1_handler
+.int_vec
+INT0
+INT1
+INT2
+No Addr Source Interrupt Definition
+1 0x0000 RESET External pin, Power-on Reset
+2 0x0002 INT0 External Interrupt Request 0
+3 0x0004 INT1 External Interrupt Request 1
+4 0x0006 INT2 External Interrupt Request 2
+5 0x0008 INT3 External Interrupt Request 3
+6 0x000A INT4 External Interrupt Request 4
+7 0x000C INT5 External Interrupt Request 5
+8 0x000E INT6 External Interrupt Request 6
+8 0x0010 INT7 External Interrupt Request 7
+9 0x0012 PCINT0 Pin Change Interrupt Request 0
+10 0x0014 PCINT1 Pin Change Interrupt Request 1
+11 0x0016 PCINT2 Pin Change Interrupt Request 2
+12 0x0018 WDT Watchdog Time-out Interrupt
+13 0x001A TIMER2_COMPA Timer/Counter2 Compare Match A
+14 0x001C TIMER2_COMPB Timer/Counter2 Compare Match B
+...
+
+--- page 21 ---
+
+0xD002 mov
+0xD004 mov
+0xD008 ...
+0x0A08
+0x0A0A
+0x0A0C
+0x0A0E
+0x0A10
+0x0A12
+Interrupt handler code does not need to
+resume the interrupted program.
+This is where OS can decide to resume
+some other task - do a context switch!
+pesudocode:
+task = pick_next_task()
+IP = task.saved_IP()
+timer
+1. prog1 timeslice
+expires!
+2. CPU jumps to
+timer interrupt
+handler
+3. handler sets
+IP = 0xD004
+resuming prog2
+0xC002 mov
+0xC004 add
+0xC008 ...
+.prog2_code
+.prog1_code
+.timer_int_handler
+CPU1
+IP = 0xC004
+current
+instruction
+
+--- page 22 ---
+
+In a time-sharing system a userspace program cannot access any shared system resource directly.
+It must do so via a system call!
+user mode
+kernel mode
+syscall interface
+User Task
+read()
+return value
+OS provided
+read()
+implementation
+Only code running here
+is allowed to directly
+access the resources
+(i.e. peripheral devices)
+
+--- page 23 ---
+
+How to disallow anything for the user code then?
+???
+set MB = 0
+MB = 0
+We need a Mode Bit!
+A single bit stored within the CPU core, set
+to 1 when running the OS code.
+illegal
+instruction
+MB = 1 and
+instruction
+is privileged
+all good!
+kernel
+mode
+user
+mode
+MB = 1
+When MB = 0 some instructions are
+disallowed - in hardware.
+A single bit stored within the CPU core, set
+to 1 when running the OS code.
+1. fetch
+2. decode
+3. execute
+
+--- page 24 ---
+
+How a program can enter the kernel mode then?
+It triggers a software interrupt!
+_start:
+mov eax, 0x1
+mov ebx, 0
+int 0x80
+First interrupt parameter
+syscall number (0x1 = exit())
+compile for x86_32
+jump to interrupt
+handler no. 128
+and
+set mode bit = 0
+inspect eax to
+determine syscall
+type
+done by CPU automatically
+Second, syscall dependent interrupt parameter
+(program exit code = 0)
+Special instruction which triggers the interrupt
+on intel x86_32 0x80 means - do a sycall!
+int main() {
+exit(0);
+}
+validate params
+and execute OS-
+provided exit()
+implementation
+the actual Operating System code running with MB = 0
+
+--- page 25 ---
+
+The Linux syscall table
+https://filippo.io/linux-syscall-table/
+%rax Name Manual Entry point
+0 read read(2) sys_read
+1 write write(2) sys_write
+2 open open(2) sys_open
+3 close close(2) sys_close
+4 stat stat(2) sys_newstat
+5 fstat fstat(2) sys_newfstat
+6 lstat lstat(2) sys_newlstat
+7 poll poll(2) sys_poll
+8 lseek lseek(2) sys_lseek
+9 mmap mmap(2) sys_ksys_mmap_pgoff
+...
+There 456 distinct syscalls in Linux 6.7 kernel! - and we're gonna learn just a few
+> man 2 syscalls

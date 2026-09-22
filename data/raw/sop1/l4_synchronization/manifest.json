@@ -1,0 +1,96 @@
+{
+  "lab_id": "sop1/l4",
+  "course": "sop1",
+  "slug": "l4_synchronization",
+  "generated_at": "2026-09-22T09:14:50.667651",
+  "sources": [
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l4/prog21.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l4_synchronization/src/prog21.c",
+      "sha256": "83fd8db9ffb332fbc8ddf617098d7bd7c6a22f4648481690abe320636c4ff18b",
+      "fetched_at": "2026-09-22T09:14:50.659157"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l4/prog22.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l4_synchronization/src/prog22.c",
+      "sha256": "1e8e24bfa6612be5d4c3daa3a42e01f28d6bae43507b4c3afce5303432f55eb1",
+      "fetched_at": "2026-09-22T09:14:50.659265"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l4/prog23.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l4_synchronization/src/prog23.c",
+      "sha256": "ff385d3c6ddb00634cd4111a564c1d4f481f8d1529f1edd2808f1ecc2404fcc5",
+      "fetched_at": "2026-09-22T09:14:50.659362"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop1l4e2.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l4_synchronization/src/sop1l4e2.zip",
+      "sha256": "bd8659f735ff966b8f7ab3777733f130fba80e817d5dfbd7c28dec8b2ebe288d",
+      "fetched_at": "2026-09-22T09:14:50.659465"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop1l4e3.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l4_synchronization/src/sop1l4e3.zip",
+      "sha256": "39b15f9402ae22640db612d727584770fad31f7cbce9f755de2f0bad9cde7710",
+      "fetched_at": "2026-09-22T09:14:50.660330"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop1l4e2.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l4_synchronization/src/sop1l4e2/Makefile",
+      "sha256": "5560c0a6e1e02ba6d51903ab39dd4ac33b96d86487ae473be011b10bb5fa63e3",
+      "fetched_at": "2026-09-22T09:14:50.660668"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop1l4e2.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l4_synchronization/src/sop1l4e2/sop-mss.c",
+      "sha256": "9e73f263f2904c4e38463a2bcd86eba6c5c57a5a7ed3183420f2838791f97a49",
+      "fetched_at": "2026-09-22T09:14:50.660695"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop1l4e3.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l4_synchronization/src/sop1l4e3/Makefile",
+      "sha256": "678162c6ed4c07fbf854137385cdfc37765df1de6f004b7d3016a94f78a14120",
+      "fetched_at": "2026-09-22T09:14:50.660719"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop1l4e3.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l4_synchronization/src/sop1l4e3/header.h",
+      "sha256": "434d9afdc2b8e773e2989a243c414427038cb174ade3141b688d78e8e18207f2",
+      "fetched_at": "2026-09-22T09:14:50.660742"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop1l4e3.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l4_synchronization/src/sop1l4e3/sop-pool.c",
+      "sha256": "2a7e26a60c1ce27705a8b2a570bd0655c140920f48f3c5b231cd7d03dec8808b",
+      "fetched_at": "2026-09-22T09:14:50.660766"
+    }
+  ],
+  "slides": [
+    "sop1_scheduling__CPU_scheduling_6.pdf",
+    "sop1_scheduling__CPU_scheduling_6.txt",
+    "sop1_scheduling__index.md",
+    "sop1_w6__IEEE_Std_1003.1_2008_Thread_cancellation.pdf",
+    "sop1_w6__IEEE_Std_1003.1_2008_Thread_cancellation.txt",
+    "sop1_w6__POSIX_threads_9.pdf",
+    "sop1_w6__POSIX_threads_9.txt",
+    "sop1_w6__Threads_3.pdf",
+    "sop1_w6__Threads_3.txt",
+    "sop1_w6__index.md",
+    "sop1_w7__IPC_2en_4.pdf",
+    "sop1_w7__IPC_2en_4.txt",
+    "sop1_w7__index.md"
+  ],
+  "extra": [],
+  "src": [
+    "prog21.c",
+    "prog22.c",
+    "prog23.c",
+    "sop1l4e2.zip",
+    "sop1l4e2/Makefile",
+    "sop1l4e2/sop-mss.c",
+    "sop1l4e3.zip",
+    "sop1l4e3/Makefile",
+    "sop1l4e3/header.h",
+    "sop1l4e3/sop-pool.c"
+  ]
+}

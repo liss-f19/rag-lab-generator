@@ -1,0 +1,791 @@
+--- page 1 ---
+
+Lecture 2 - Filesystem API
+Operating Systems 1
+Warsaw University of Technology - Faculty of Mathematics and Information Science
+
+--- page 2 ---
+
+User programs access the filesystem to store data on a persistent storage.
+define an abstract
+logical filesystem
+model
+OS responsibilities
+- what is a file?
+- how it looks like inside?
+- what are file attributes?
+- are files structured? how?
+- create file
+- open/close file?
+- delete file
+- read/write from file
+- create directories?
+...
+- map the logical model
+to a physical representation
+- efficiently
+- safely
+- using variety of hardware
+provide a syscall
+interface to it
+implement this
+abstract interface
+
+--- page 3 ---
+
+0x00, 0x0b, 0x0a, 0x00
+0x01, 0x0b, 0x0a, 0x00
+0x02, 0x0b, 0x0a, 0x00
+0xff, 0xff, 0xff, 0xff
+0x0a, 0x0b, 0x0c, 0x0d
+0x00, 0x00, 0x00, 0x01
+0x00, 0x00, 0x00, 0x02
+0x00, 0x00, 0x00, 0x03
+0x00, 0x00, 0x00, 0x04
+0x00, 0x00, 0x00, 0x05
+0x00, 0x00, 0x00, 0x06
+0x00, 0x00, 0x00, 0x07
+0xff, 0xff, ...
+record 1 - 32 bytes
+none,
+just bytes
+varying length
+records, i.e. lines
+fixed size records
+What is an abstract file?
+many others
+record 2 - 32 bytes
+record 3 - 32 bytes
+record 4 - 32 bytes
+line 1 - "abc"
+line 2 - "defg"
+line 3 - "hijklmn"
+line 4 - "op"
+Internal
+file structure
+
+--- page 4 ---
+
+create()
+How do I identify the file?
+Can I change the position? Read/write/both?
+What can I read/write? bytes? records? lines?
+What can I do to it?
+open()
+read()
+write()
+seek()
+delete()
+truncate()
+Do I need to open it before accessing the data?
+What if someone else is also touching it?
+
+--- page 5 ---
+
+How do I access the actual data?
+Sequential access
+open(file)
+read(file, len)
+write(file, len)
+seek(file, offset)
+file.txt
+position
+OS maintains position within file
+Here it's an application responsibility
+Random (direct) access
+read(file, offset, len)
+write(file, offset, len)
+
+--- page 6 ---
+
+What attributes does file have beyond data?
+name
+size
+protection
+timestamps
+identifier
+type
+location
+might also be a kept within the directory
+logical and physical
+who is the owner? who can access it?
+when and how was it used?
+does not change with renames
+only if OS supports distinct file types
+physical storage information
+
+--- page 7 ---
+
+How are files organized?
+a.txt
+Flat - single directory in FS
+alan
+no naming clash
+the directory
+files
+b.txt
+c.txt
+2-level - Per-user directory
+a.txt
+b.txt
+c.txt
+a.txt
+a.out
+chris
+
+--- page 8 ---
+
+traversal is fast, we can speak of relative and absolute paths now
+Multi level - tree structure
+bin
+home
+config
+alan
+a.txt
+b.txt
+c.txt
+a.txt
+a.out
+chris
+sshd
+info.txt
+client
+server
+cat
+sed
+httpd.conf
+
+--- page 9 ---
+
+Acyclic graph structure
+files can have multiple links (and paths), directories cannot!
+bin
+home
+config
+alan
+a.txt
+b.txt
+c.txt
+a.txt
+meow
+chris
+sshd
+info.txt
+client
+server
+cat
+sed
+httpd.conf
+
+--- page 10 ---
+
+Sharing semantics
+In a multiprogramming scenario OS has to define how concurrent operations behave
+Task A
+write(100 bytes)
+Writes might become visible immediately or after closing the file session
+The system might simply disallow concurrent access - simple but inefficient
+Otherwise it must at least protect the FS against corruption
+Task B
+write(20 bytes)
+Task C
+read(1 byte) = ?
+
+--- page 11 ---
+
+files are just bytes
+and grow when necessary
+The POSIX filesystem
+A concrete example of an abstract interface
+0x00, 0x1A, 0xFF, 0xFF, 0x00
+write(2 bytes)
+new size
+files require opening before any I/O
+fd = open(file)
+read(fd, buffer, size)
+write(fd, buffer, size)
+close(fd)
+The system maintains file position
+per open file session
+There's both sequential and random
+access API
+read(2 bytes)
+yields 0x00, 0x1A
+File - an object that can be written to, or read from, or both.
+0x01, 0x02
+
+--- page 12 ---
+
+home
+root
+alan
+chris
+log
+env
+cat
+perm
+hey
+cat
+dev
+It's organized into a single acyclic tree
+an inode
+a root dir inode
+directory inode's data is
+a mapping to other inodes
+non-directory inodes
+can have multiple links
+regular file inode
+points to raw data
+tty
+sda
+
+--- page 13 ---
+
+POSIX file attributes
+Each file has an inode containing metadata about the file
+Device ID - ID of the device (FS) which this Inode belongs to
+Inode number - FS unique ID of the file
+File type and mode - a mode_t value encoding permissions and file type
+Link count - a reference counter
+User ID - owner UID
+Group ID - owning group UID
+Represented device - only if file is a special device file
+File size - logical, in bytes
+Preferred block size - for most efficient I/O
+Number of blocks - number of allocated device blocks
+Various Timestamps - access/modification/(birth)/status change
+> man 7 inode
+
+--- page 14 ---
+
+UNIX mode bits
+0754
+octal
+0b111
+0b101
+0b100
+T
+bit 15
+file type
+mode_t val =
+You can freely set SUID, SGID, SVTX with another octal digit.
+You cannot set the file type but you can check it by inspecting the highest bits.
+SGID
+SVTX
+R
+W
+X
+R
+W
+X
+R
+W
+T
+T
+T
+SUID
+"sticky bits"
+owner access
+group access
+others access
+bit 0
+X
+
+--- page 15 ---
+
+POSIX file types
+The following mask values are defined for the file type:
+S_IFMT 0170000 bit mask for the file type bit field
+S_IFSOCK 0140000 socket
+S_IFLNK 0120000 symbolic link
+S_IFREG 0100000 regular file
+S_IFBLK 0060000 block device
+S_IFDIR 0040000 directory
+S_IFCHR 0020000 character device
+S_IFIFO 0010000 FIFO
+this is what you usually expect
+All of the above may be read from, written to, or both but these
+operations are not necessarily mapped to hard drive operations
+
+--- page 16 ---
+
+File session as seen by the kernel
+0: stdin
+...
+Per-process
+File Descriptor
+Table
+74859: (regfile)
+size, timestamps,
+device, operations
+userspace
+kernel
+1: stdout
+2: stderr
+User Task A
+> ls -l /proc/<pid>/fd(info)
+3: fptr
+4: NULL
+5: NULL
+int fd = 3;
+read(fd, ...);
+mode: r
+offset: 2
+inode: 74859
+...
+...
+System-Wide
+Open Files Table
+mode: w
+offset: 0
+inode: 4772
+empty
+4722: (vterm)
+size, timestamps,
+device, operations
+mode: r
+offset: 0
+inode: 4772
+...
+...
+...
+System-Wide
+Inode Table
+
+--- page 17 ---
+
+The open() syscall
+int fd = open(const char *pathname, int oflag, ...);
+> man 3p open
+unique
+file descriptor
+relative or
+absolute file path
+maybe more,
+depends on oflag
+The open flags determine how read/write's shall later behave
+O_RDONLY - read only access, write() won't work
+O_WRONLY - write only access, read() won't work
+O_RDWR - read-write access, both will work
+O_RDONLY | O_WRONLY means nothing !
+The returned file descriptor is a unique per-process identifier of an open file passed
+to following file-maniupulation syscalls.
+Typically the shell automatically opens file descriptors 0, 1 and 2 (stdin, stdout and stderr) for each process.
+open mode
+
+--- page 18 ---
+
+file.bin
+Newly opened file descriptors are positioned at the offset 0 (unless O_APPEND is used).
+With O_APPEND position is automatically changed to the end prior to each write().
+Files size automatically grows with each write that would go past the end of file.
+offset = 0
+offset = end
+current pos
+after
+read
+jump!
+before
+write
+fd = open("file.bin", O_RDWR | O_APPEND);
+read(fd, ...);
+write(fd, ...);
+File position
+file.bin
+after
+write
+
+--- page 19 ---
+
+O_APPEND - write() always appends at the end
+O_TRUNC - truncate file size to 0 bytes too
+O_NONBLOCK - read/write won't block, even if operation can't complete immediately
+O_CREAT - create file if not exists, requires mode parameter (...)
+O_EXCL - use with O_CREAT, fail if file already exists
+Open file.txt previously creating it if it doesn't exist:
+Create and open pid.lock file but fail if it is already there:
+oh look, the 3rd argument,
+required with O_CREAT
+we do not know if the file
+was created or not
+Bits set in umask are subtracted from mode bits supplied to open().
+Open mode modifiers
+open("file.txt", O_RDWR | O_CREAT, 0744);
+open("pid.lock", O_RDWR | O_CREAT | O_EXCL, 0666);
+this is atomic, only one process
+will succeed in creating the pid.lock
+> man 3p umask
+
+--- page 20 ---
+
+Closing the file session
+> man 3p close
+int ret = close(int fildes);
+0: stdin
+...
+74859: (regfile)
+size, timestamps,
+device, operations
+1: stdout
+2: stderr
+User Task A
+3: fptr
+4: NULL
+5: NULL
+int fd = 3;
+close(fd);
+mode: r
+offset: 2
+inode: 74859
+...
+...
+mode: w
+offset: 0
+inode: 4772
+empty
+4722: (vterm)
+size, timestamps,
+device, operations
+mode: r
+offset: 0
+inode: 4772
+
+--- page 21 ---
+
+Synchronous I/O syscalls
+ssize_t nbyte = write(int fildes, const void *buf, size_t nbyte);
+ssize_t nbyte = pwrite(int fildes, const void *buf, size_t nbyte, off_t offset);
+where from
+where to
+how much
+how many bytes were actually read/written
+0 indicates end of file!
+Sequential access API
+size_t nbyte = read(int fd, void* buf, size_t nbyte);
+ssize_t nbyte = pread(int fildes, void *buf, size_t nbyte, off_t offset);
+> man 3p read
+> man 3p write
+Direct access API
+where in file
+
+--- page 22 ---
+
+Scatter-gather I/O syscalls
+ssize_t nbytes = readv(int fildes, const struct iovec *iov, int iovcnt);
+ssize_t nbytes = writev(int fildes, const struct iovec *iov, int iovcnt);
+> man 3p readv
+> man 3p writev
+Process memory
+iov[0]
+writev(fd, iov, 3)
+iov[1]
+iov[2]
+
+--- page 23 ---
+
+Obtaining file attributes
+> man 3p fstatat
+int fstatat(int fd, const char *restrict path,
+struct stat *restrict buf, int flag);
+int lstat(const char *restrict path, struct stat *restrict buf);
+int stat(const char *restrict path, struct stat *restrict buf)
+path or open fd
+where to put attributes
+lstat() does not
+follow symlinks
+These functions just return information from the i-node structure sitting in the kernel space.
+
+--- page 24 ---
+
+Moving through the file
+> man 3p lseek
+off_t pos = lseek(int fildes, off_t offset, int whence);
+Changing the system-maintained file position
+which file
+desired position
+(meaning depends on whence)
+seek mode
+Seek mode:
+SEEK_SET - offset is relative to the beginning
+SEEK_CUR - offset is relative to current position
+SEEK_END - offset is relative to file end
+This call might also be used to find out current position.
+Seek allows jumping past the logical end of file.
+pos after
+jump
+
+--- page 25 ---
+
+File descriptor cloning
+> man 3p dup
+int fd = dup(int fildes);
+int fd = dup2(int fildes, int fildes2);
+what to clone
+desired clone value
+new fd refering
+to same thing as filedes
+...
+74859: (regfile)
+size, timestamps,
+device, operations
+2: stderr
+User Task A
+3: fptr
+4: fptr
+5: NULL
+int fd = 3;
+int fd2 = dup(fd);
+mode: r
+offset: 2
+inode: 74859
+...
+...
+empty
+...
+...
+...
+
+--- page 26 ---
+
+DIR *opendir(const char *dirname);
+int closedir (DIR *dirstream);
+struct dirent *readdir(DIR *dirp);
+int readdir_r(DIR *restrict dirp,
+struct dirent *restrict entry,
+struct dirent **restrict result);
+void rewinddir (DIR *dirstream);
+int telldir (DIR *dirstream);
+void seekdir (DIR *dirstream, long int pos);
+Directories usually cannot be accessed via regular open/read since they have a record structure.
+an opaque type representing a directory stream
+returns a pointer to a library allocated storage
+a thread-safe version
+equivalent of lseek()
+Each directory entry contains a name and an i-node number.
+Directory operations
+> man 3p readdir
+
+--- page 27 ---
+
+Process root and current working directory
+int chdir(const char *path);
+char *getcwd(char *buf, size_t size);
+int chroot(const char *path);
+User Task A
+root
+cwd
+Relative paths are resolved starting from cwd attribute.
+> man 3p chdir
+> man 3p getcwd
+> man 2 chroot
+home
+root
+alan
+chris
+log
+env
+cat
+perm
+hey
+cat
+dev
+tty
+sda
+
+--- page 28 ---
+
+log
+int link(const char *path1, const char *path2);
+link("log", "log2")
+Creates a new directory entry path2 pointing to the same i-node as path1.
+Increments a reference count stored in the i-node.
+note: this is a non-atomic rename operation
+use rename() to get atomicity
+File link operations
+> man 3p link
+> man 3p unlink
+log2
+log
+unlink("log")
+log2
+int unlink(const char *path);
+Removes a new directory entry path pointing to some i-node.
+Decrements a reference count stored in the i-node.
+If it drops to 0 then the i-node and associated data is removed.
+
+--- page 29 ---
+
+Symlink operations
+int symlink(const char *path1, const char *path2);
+> man 3p symlink
+log
+log.lnk
+target: ./log
+that's a broken symlink
+int readlink(const char *filename, char *buf, size_t size)
+symlink("log", "log.lnk")
+Creates a new directory entry pointing to a new symlink i-node.
+The symlink internally points to path1, which may or may not exist.
+Does not increment a reference count stored in the target i-node.
+log
+log.lnk
+target: ./log
+unlink("log")
+Obtains target path stored in the symlink.
+
+--- page 30 ---
+
+FILE stream
+void* buffer
+...
+FILE *fopen(const char *restrict pathname, const char *restrict mode);
+mode: r|w|a|r+|w+|a+
+returns an opaque structure pointer
+A stream wraps low-level file descriptor and translates
+I/O operations into read/write syscalls.
+int fclose(FILE *stream);
+Closing a stream writes any pending data, deallocates the buffer,
+and closes the associated file descriptor.
+C runtime automatically creates 3 streams: stdin, stdout and stderr.
+Standard C streams
+A more portable, weaker API wrapping POSIX filesystem API
+int fd
+> man 3p fopen
+> man 3p fclose
+not a syscall!
+Stream operations are buffered to reduce syscall overhead.
+
+--- page 31 ---
+
+FILE
+stream
+fileno()
+fdopen()
+You can extract underlying file descriptor
+Or wrap raw fd into a buffered stream
+This unlock full power of
+formatting library even
+if you have just a raw fd
+3
+Be careful not to share the same
+descriptor in two different streams
+will be double closed!
+int fd
+FILE stream
+...
+int fd = 3;
+Mixing API
+> man 3p fileno
+> man 3p fdopen
+FILE stream
+...
+int fd = 3;
+
+--- page 32 ---
+
+Buffering modes
+int setvbuf(FILE *restrict stream, char *restrict buf, int type, size_t size)
+own buffer or NULL,
+then it is library-managed
+note: must outlive the stream itself!
+stream to operate on
+_IONBF
+_IOLBF
+_IOBF
+Manually forces write of pending data and discards any not cosumed read data.
+Default buffering mode depends on underlying file type!
+> man 3p setvbuf
+Non-buffered - all operations are immediately translated to syscalls.
+Line-buffered - flushed after reaching a newline character.
+Fully-buffered - flushed after filling the buffer completely.
+int fflush(FILE *stream);
+> man 3p fflush
+
+--- page 33 ---
+
+Stream I/O functions
+int fgetc(FILE *stream); int getc(FILE *stream);
+int getchar(void);
+int fputc(int c, FILE *stream);
+int putc(int c, FILE *stream);
+> man 3p <all>
+int fprintf(FILE *stream, const char *template, ...);
+int fscanf(FILE *stream, const char *template, ...);
+Character by character:
+String by string:
+Raw:
+size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream);
+size_t fwrite(void *ptr, size_t size, size_t nitems, FILE *stream);
+char* fgets(char *buf, int buflen, FILE *stream);
+int fputs(const char *s, FILE *stream);
+int puts(const char *s);
+With conversions:
+
+--- page 34 ---
+
+Stream I/O functions
+int fgetc(FILE *stream); int getc(FILE *stream);
+int getchar(void);
+int fputc(int c, FILE *stream);
+int putc(int c, FILE *stream);
+> man 3p <all>
+int fprintf(FILE *stream, const char *template, ...);
+int fscanf(FILE *stream, const char *template, ...);
+Character by character:
+String by string:
+Raw (OS and FS dependent!):
+size_t fread(void *ptr, size_t size, size_t nitems, FILE *stream);
+size_t fwrite(void *ptr, size_t size, size_t nitems, FILE *stream);
+char* fgets(char *buf, int buflen, FILE *stream);
+int fputs(const char *s, FILE *stream);
+int puts(const char *s);
+With conversions:
+
+--- page 35 ---
+
+Stream position functions
+long int ftell(FILE *stream);
+off_t ftello(FILE *stream); // for large files
+int fgetpos(FILE *stream, fpos_t *position);
+> man 3p <all>
+int fseek(FILE *stream, long int offset, int whence);
+int fseeko(FILE *stream, off_t offset, int whence); // for large files
+void rewind(FILE *stream);
+int fsetpos(FILE *stream, const fpos_t *position);
+Setters:
+Getters:
+Small adjustments to position within the stream do not need an lseek syscall thanks to buffering.
+file.txt
+buffered
+seeking around buffer has low cost
+
+--- page 36 ---
+
+Stream state functions
+void clearerr(FILE *stream);
+int feof(FILE *stream);
+int ferror(FILE *stream);
+> man 3p feof
+> man 3p ferror
+Each stream contains error and EOF indicator.
+EOF and error indicator can be cleared only by calling clearerr()!
+This means that stream after reaching the end won't capture concurrent file changes.
+
+--- page 37 ---
+
+Stream synchronization
+void flockfile(FILE *file);
+int ftrylockfile(FILE *file);
+void funlockfile(FILE *file);
+> man 3p flockfile
+Each stream contains a lock (mutex) allowing for safe-by-default multi-threaded access.
+If applications wish to opt-out from this default synchronization overhead
+it can do so with so called unlocked stdio.
+int getc_unlocked(FILE *stream);
+int getchar_unlocked(void);
+int putc_unlocked(int c, FILE *stream);
+int putchar_unlocked(int c);
+...
+you can ensure proper serialization
+of series of reads/writes
+> man 3 unlocked_sdio

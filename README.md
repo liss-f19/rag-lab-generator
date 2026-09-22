@@ -1,584 +1,135 @@
-# RAG Lab Generator
+# rag-lab-generator
 
-A Python project for building and evaluating a Retrieval-Augmented
-Generation (RAG) application.
+Design and evaluation of a Retrieval-Augmented Generation system for automatic creation of
+laboratory assignments. Target courses: Operating Systems 1 and 2 (MiNI, Warsaw University of
+Technology). A single LangGraph agent helps students prepare for labs: it generates new tasks in the
+style and difficulty of the existing ones, explains topics, and draws concept diagrams. Two RAG
+architectures (vector and graph) and several chunking / search strategies are implemented behind one
+interface so they can be benchmarked against each other.
 
-> **Current status:** This repository contains the project
-> infrastructure and development setup. The RAG implementation itself is
-> intentionally not included yet.
+## Architecture
 
-## Requirements
-
-Install the following before working with the project:
-
--   Git
--   Python 3.12
--   `uv`
--   Docker Desktop
--   A GitHub account with access to the repository
-
-### Verify prerequisites
-
-``` bash
-git --version
-python3 --version
-uv --version
-docker --version
-docker compose version
+```
+sources  ->  parsers  ->  data/raw (lab.xml, src/, slides/, extra/, summary)  ->  chunkers
+                                                                                   |
+Postgres + pgvector  <-  embeddings (bge-m3 | fake)  <-----------------------------+
+   |            |
+   |            +-- knowledge graph (nodes/edges tables + networkx)
+   |
+searchers: lexical | lexical_idf | dense | hybrid_rrf | hybrid_rrf_idf | graph_walk
+   |
+RAG: vector | graph   ->  LangGraph agent (generate_lab, explain_topic, visualize_concept)
+   |                              |
+eval harness (matrix, metrics)    +-- FastAPI (/api) -> React UI (web/)
 ```
 
-Python 3.12 is the version used by CI and Docker.
+Every swappable component (source, chunker, embedder, searcher, rag, llm) is an abstract class plus
+a registry entry; the active strategy is chosen by name in `.env` or on the command line.
 
-------------------------------------------------------------------------
+| Kind     | Strategies                                                        | Package                          |
+|----------|-------------------------------------------------------------------|----------------------------------|
+| source   | `sop_site` (git clone of the course site), `kozlowski` (http)     | `ingestion/sources/`             |
+| chunker  | `hierarchical` (sections, semantic fallback), `fixed`, `semantic` | `ingestion/chunking/`            |
+| embedder | `bge_m3` (local, multilingual), `fake` (tests)                    | `retrieval/embeddings/`          |
+| searcher | `lexical`, `lexical_idf`, `dense`, `hybrid_rrf`, `hybrid_rrf_idf`, `graph_walk` | `retrieval/searchers/` |
+| rag      | `vector`, `graph`                                                 | `retrieval/rag/`                 |
+| llm      | `anthropic` (Claude API), `fake` (offline)                        | `generation/llm/`                |
 
-## 1. Clone the repository
+Corpus layout and document ids: `docs/corpus.md`. Evaluation protocol and results: `docs/eval.md`.
+Lab XML schema: `docs/lab.xsd`. QA reports: `docs/qa-report.md`, `docs/qa-web-report.md`.
 
-``` bash
-git clone <REPOSITORY_URL>
-cd rag-lab-generator
+## Quick start
+
+```bash
+uv sync                                  # Python 3.12 (pinned in .python-version)
+cp .env.template .env                    # ANTHROPIC_API_KEY is optional; LLM_PROVIDER=fake works offline
+docker compose up -d db                  # pgvector Postgres on localhost:5433, schema applied on first start
+
+uv run rag-lab ingest                    # clone/download sources, build data/raw/<course>/<lab>/
+uv run rag-lab corpus-stats
+uv run rag-lab chunk --strategy hierarchical
+uv run rag-lab index --embedder bge_m3 --strategy hierarchical   # first run downloads the model (~2 GB)
+uv run rag-lab graph-build --strategy hierarchical
+
+uv run rag-lab query "how to read directory entries with readdir" --rag vector --searcher hybrid_rrf
+uv run rag-lab query "how does epoll differ from select" --rag graph
+uv run rag-lab agent "generate a lab about FIFO similar to L5" --course sop2      # --llm anthropic with a key
+uv run rag-lab eval --matrix              # results/*.csv and the eval_runs table
+
+uv run rag-lab serve                      # FastAPI on 127.0.0.1:8000
+cd web && npm install && npm run dev      # React UI on http://localhost:5173
 ```
 
-Replace `<REPOSITORY_URL>` with the repository URL.
+## Development
 
-------------------------------------------------------------------------
-
-## 2. Install `uv`
-
-If `uv` is not installed, install it using the official installer:
-
-``` bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-Then restart the terminal or load the environment:
-
-``` bash
-source "$HOME/.local/bin/env"
-```
-
-Verify:
-
-``` bash
-uv --version
-```
-
-> Do not copy the `(sh, bash, zsh)` text from the installation message.
-> It is documentation indicating supported shells, not part of the
-> command.
-
-------------------------------------------------------------------------
-
-## 3. Set up the Python environment
-
-From the project root:
-
-``` bash
-uv python install 3.12
-uv sync
-```
-
-`uv sync` creates the project virtual environment and installs the
-dependencies defined in `pyproject.toml`.
-
-You do not need to manually activate `.venv` to run project commands.
-Use `uv run`:
-
-``` bash
-uv run pytest
+```bash
+uv run pytest -m "not integration"        # unit tests
+uv run pytest -m integration              # needs the db container; rebuild the graph afterwards
+uv run mypy src
+uv run ruff check src tests && uv run ruff format --check src tests
 uv run pre-commit run --all-files
+cd web && npm run build && npm run lint
 ```
 
-------------------------------------------------------------------------
+Code regulations (file headers, comments, typing, registries) are in `CLAUDE.md`. CI (`.github/workflows/ci.yml`)
+runs pre-commit, mypy, unit and integration tests against a pgvector service, and the Docker build.
 
-## 4. Configure environment variables
+## Repository map
 
-Create your local environment file from the template:
-
-``` bash
-cp .env.template .env
+```
+src/rag_lab_generator/
+  config.py  models.py  registry.py  cli.py
+  ingestion/   sources/ parsers/ chunking/ lab_xml.py layout.py mapping.yaml summarizer.py pipeline.py
+  retrieval/   embeddings/ stores/ searchers/ rag/ graph/
+  generation/  llm/ prompts/*.md schemas.py
+  agent/       state.py graph.py rag_factory.py tools/
+  eval/        queries.yaml metrics.py runner.py judge.py
+  api/         app.py routers/ schemas.py deps.py
+web/           Vite + React + TypeScript UI
+sql/           001_schema.sql
+data/          corpus (gitignored)      results/   eval outputs (gitignored)
 ```
 
-Edit `.env` and add the required values.
+## CI (GitHub Actions)
 
-Example:
+Three workflows under `.github/workflows/`:
 
-``` env
-OPENAI_API_KEY=
-OPENAI_MODEL=
-OPENAI_EMBEDDING_MODEL=
-CHROMA_PERSIST_DIRECTORY=./data/chroma
+| workflow | trigger | what it does |
+| --- | --- | --- |
+| `ci.yml` | every PR and push to `main` | pre-commit, mypy, unit + integration tests against a throwaway pgvector container, docker build |
+| `deploy.yml` | every PR (preview) and push to `main` (production) | `vercel deploy` with a project token, so collaborators need only push rights on GitHub; the PR gets a comment with the preview URL |
+| `rebuild-db.yml` | manual, or push to `main` touching `data/raw/**`, `sql/`, ingestion, retrieval or eval code | rebuilds the production database from the committed corpus: chunks of every strategy, bge-m3 vectors through the HuggingFace Inference API, the knowledge graph, then three retrieval evaluations reported in the job summary and kept as an artifact |
+
+The corpus is versioned: the text part of `data/raw` (lab.xml, sources, summaries, pdf text
+sidecars, ~3 MB) is committed, pdfs and `data/external` are not. Whoever changes the corpus runs
+`uv run rag-lab ingest` locally and commits the result; the database is a derived artifact that
+`rebuild-db` recreates in about 15 minutes. `chunk --replace` empties a strategy before refilling
+it, so production search is degraded for those minutes.
+
+Repository secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (from `.vercel/project.json`),
+`NEON_DATABASE_URL_UNPOOLED` (the direct Neon connection string), `HF_API_TOKEN` (fine-grained token
+with the "Make calls to Inference Providers" permission).
+
+## Deployment (Vercel)
+
+One Vercel project with two services defined in `vercel.json`: `frontend` (Vite build of `web/`) and
+`backend` (FastAPI via `main.py`, Python 3.12 on Fluid Compute). Public routes: `/api/*` -> backend,
+everything else -> frontend. Database: Neon Postgres with pgvector provisioned through the Vercel
+Marketplace (env vars `DATABASE_URL`, `DATABASE_URL_UNPOOLED` are injected automatically).
+
+Heavy dependencies are optional extras so the function stays small: `ingest` (pymupdf, xhtml2pdf,
+markdown), `embed-local` (sentence-transformers), `serve` (uvicorn). Locally use `uv sync --all-extras`.
+On Vercel query embeddings come from `EMBEDDING_PROVIDER=bge_m3_hf` (HuggingFace Inference API, same
+bge-m3 vectors as the local model); set `HF_API_TOKEN`. Corpus files ship with the function from
+`data/raw` (pdfs excluded by `.vercelignore`); the database is loaded once from a local dump:
+
+```bash
+vercel link && vercel integration add neon --non-interactive --no-claim
+vercel integration resource connect <neon-resource> rag-lab-generator --yes
+vercel env pull .env.vercel --environment=preview
+pg_dump "$LOCAL_DATABASE_URL" --no-owner --no-privileges -f dump.sql && psql "$DATABASE_URL_UNPOOLED" -f dump.sql
+printf 'hf_...' | vercel env add HF_API_TOKEN production
+vercel deploy --prod
 ```
 
-### Important
-
-Never commit `.env`.
-
-The repository contains `.env.template` as a safe template, while `.env`
-is ignored by Git.
-
-Check:
-
-``` bash
-git status
-```
-
-`.env` should not appear as an untracked file.
-
-------------------------------------------------------------------------
-
-## 5. Install and configure pre-commit
-
-Pre-commit is part of the project dependencies.
-
-Install the Git hooks:
-
-``` bash
-uv run pre-commit install
-```
-
-Run all hooks manually:
-
-``` bash
-uv run pre-commit run --all-files
-```
-
-The configured checks include:
-
--   Ruff formatting
--   Ruff linting
--   Flake8
--   Pylint
--   common file checks
-
-Some hooks automatically fix issues. If a hook modifies files, run the
-command again:
-
-``` bash
-uv run pre-commit run --all-files
-```
-
-The command should finish with all applicable hooks passing.
-
-------------------------------------------------------------------------
-
-## 6. Run tests
-
-Run the complete test suite:
-
-``` bash
-uv run pytest
-```
-
-Tests are located under:
-
-``` text
-tests/
-```
-
-The project is configured so tests can import the package from:
-
-``` text
-src/
-```
-
-------------------------------------------------------------------------
-
-## 7. Build the Docker image
-
-Make sure Docker Desktop is running.
-
-Build the image:
-
-``` bash
-docker build -t rag-lab-generator .
-```
-
-Verify that the image exists:
-
-``` bash
-docker images
-```
-
-You can verify that the package is available inside the image:
-
-``` bash
-docker run --rm rag-lab-generator python -c "import rag_lab_generator; print('Docker OK')"
-```
-
-Expected output:
-
-``` text
-Docker OK
-```
-
-### Docker configuration
-
-The repository contains:
-
--   `Dockerfile` --- builds the application image
--   `.dockerignore` --- prevents unnecessary files and secrets from
-    being copied into the image
-
-The Docker build uses Python 3.12 and `uv`.
-
-------------------------------------------------------------------------
-
-## 8. Development workflow
-
-Create a feature branch from the latest `main`:
-
-``` bash
-git checkout main
-git pull origin main
-git checkout -b feature/<short-description>
-```
-
-Make your changes, then run the local quality checks:
-
-``` bash
-uv run pre-commit run --all-files
-uv run pytest
-docker build -t rag-lab-generator .
-```
-
-Fix any errors before pushing.
-
-Commit your changes:
-
-``` bash
-git add .
-git commit -m "feat: <description>"
-```
-
-Push the branch:
-
-``` bash
-git push --set-upstream origin feature/<short-description>
-```
-
-Then create a Pull Request targeting:
-
-``` text
-main
-```
-
-------------------------------------------------------------------------
-
-## 9. CI/CD
-
-Every Pull Request targeting `main` runs the GitHub Actions CI workflow.
-
-The CI pipeline performs:
-
-``` text
-Checkout
-   ↓
-Install uv
-   ↓
-Set up Python 3.12
-   ↓
-Install dependencies
-   ↓
-Run pre-commit
-   ↓
-Run pytest
-   ↓
-Build Docker image
-```
-
-The CI job is called:
-
-``` text
-build
-```
-
-A Pull Request cannot be merged into `main` unless the required `build`
-status check passes.
-
-### CI locally
-
-To reproduce the main checks locally:
-
-``` bash
-uv run pre-commit run --all-files
-uv run pytest
-docker build -t rag-lab-generator .
-```
-
-------------------------------------------------------------------------
-
-## 10. Branch protection
-
-The `main` branch is protected.
-
-Development should follow:
-
-``` text
-feature branch
-      ↓
-Pull Request
-      ↓
-CI
-      ↓
-build ✓
-      ↓
-merge into main
-```
-
-Direct changes to `main` are not part of the normal development
-workflow.
-
-The required CI check is:
-
-``` text
-build
-```
-
-------------------------------------------------------------------------
-
-## 11. Pull Request checklist
-
-Before opening a Pull Request:
-
--   [ ] Code is on a feature branch
--   [ ] `uv run pre-commit run --all-files` passes
--   [ ] `uv run pytest` passes
--   [ ] `docker build -t rag-lab-generator .` succeeds
--   [ ] No secrets are committed
--   [ ] `.env` is not committed
--   [ ] Changes are described in the Pull Request
-
-------------------------------------------------------------------------
-
-## 12. Project structure
-
-The current infrastructure is organized as:
-
-``` text
-rag-lab-generator/
-│
-├── .github/
-│   ├── workflows/
-│   │   └── ci.yml
-│   └── PULL_REQUEST_TEMPLATE/
-│       └── pull_request.md
-│
-├── src/
-│   └── rag_lab_generator/
-│       └── __init__.py
-│
-├── tests/
-│   └── unit/
-│       └── test_smoke.py
-│
-├── .dockerignore
-├── .env.template
-├── .gitignore
-├── .pre-commit-config.yaml
-├── Dockerfile
-├── README.md
-├── pyproject.toml
-└── uv.lock
-```
-
-The RAG application structure will be added separately.
-
-------------------------------------------------------------------------
-
-## 13. Dependency management with `uv`
-
-Add a runtime dependency:
-
-``` bash
-uv add <package>
-```
-
-Add a development dependency:
-
-``` bash
-uv add --dev <package>
-```
-
-After changing dependencies, commit both:
-
-``` text
-pyproject.toml
-uv.lock
-```
-
-For reproducible CI installations, CI uses:
-
-``` bash
-uv sync --locked
-```
-
-Do not manually edit `uv.lock`.
-
-------------------------------------------------------------------------
-
-## 14. Useful commands
-
-### Install/sync dependencies
-
-``` bash
-uv sync
-```
-
-### Run tests
-
-``` bash
-uv run pytest
-```
-
-### Run all pre-commit checks
-
-``` bash
-uv run pre-commit run --all-files
-```
-
-### Install pre-commit Git hooks
-
-``` bash
-uv run pre-commit install
-```
-
-### Build Docker image
-
-``` bash
-docker build -t rag-lab-generator .
-```
-
-### Check Docker image
-
-``` bash
-docker images
-```
-
-### Check Git status
-
-``` bash
-git status
-```
-
-### Update local `main`
-
-``` bash
-git checkout main
-git pull origin main
-```
-
-------------------------------------------------------------------------
-
-## 15. Troubleshooting
-
-### `uv: command not found`
-
-Load the `uv` environment:
-
-``` bash
-source "$HOME/.local/bin/env"
-```
-
-If necessary, restart the terminal.
-
-Then:
-
-``` bash
-uv --version
-```
-
-### Pre-commit fails after automatically changing files
-
-Run it again:
-
-``` bash
-uv run pre-commit run --all-files
-```
-
-Some formatting and file hooks modify files on their first run.
-
-### Docker build fails
-
-Make sure Docker Desktop is running:
-
-``` bash
-docker --version
-```
-
-Then rebuild:
-
-``` bash
-docker build -t rag-lab-generator .
-```
-
-If you suspect a stale Docker cache:
-
-``` bash
-docker build --no-cache -t rag-lab-generator .
-```
-
-### Dependencies and lock file are inconsistent
-
-Run:
-
-``` bash
-uv lock
-uv sync
-```
-
-Then commit the updated `uv.lock` together with `pyproject.toml`.
-
-------------------------------------------------------------------------
-
-## 16. Architecture status
-
-The project currently has the infrastructure needed to start RAG
-development:
-
-``` text
-Git
- │
- ├── Feature branches
- └── Protected main
-          │
-          ▼
-      Pull Request
-          │
-          ▼
-     GitHub Actions
-          │
-     ┌────┼────┐
-     ▼    ▼    ▼
- pre-commit pytest Docker
-     │    │    │
-     └────┼────┘
-          ▼
-       build ✓
-          │
-          ▼
-      merge main
-```
-
-The application layer will be introduced later:
-
-``` text
-Documents
-    ↓
-Ingestion
-    ↓
-Chunking
-    ↓
-Embeddings
-    ↓
-Vector Store
-    ↓
-Retrieval
-    ↓
-LLM
-    ↓
-RAG Answer
-    ↓
-Evaluation
-```
-
-SonarQube is intentionally not part of this project setup.
+Production: https://rag-lab-generator.vercel.app
