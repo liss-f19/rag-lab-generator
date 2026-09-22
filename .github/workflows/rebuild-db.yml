@@ -79,6 +79,14 @@ jobs:
       - name: Build graph
         run: uv run rag-lab graph-build --strategy hierarchical
 
+      # Node descriptions: the real model once ANTHROPIC_API_KEY is a repository secret,
+      # deterministic stubs from the fake provider until then. Cached by source hash.
+      - name: Describe graph nodes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LLM_PROVIDER: ${{ secrets.ANTHROPIC_API_KEY && 'anthropic' || 'fake' }}
+        run: uv run rag-lab graph-describe
+
       - name: Database stats
         run: uv run rag-lab db-stats
 

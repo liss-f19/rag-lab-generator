@@ -224,6 +224,49 @@ class GraphEdge(BaseModel):
     properties: dict[str, Any] = Field(default_factory=dict)
 
 
+class NodeDescription(BaseModel):
+    """Generated summary of one graph node, cached by the hash of its sources."""
+
+    node_id: str
+    text: str
+    source_hash: str
+    model: str
+    generated_at: datetime = Field(default_factory=datetime.now)
+
+
+class DocumentHeader(BaseModel):
+    """Identity of a stored document without its sections (one documents row)."""
+
+    id: str
+    course: Course
+    kind: DocumentKind
+    lab_id: str | None = None
+    title: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class NodeSourceLocation(BaseModel):
+    """One chunk of a source document, named the way a reader would find it."""
+
+    chunk_id: str
+    label: str
+    kind: ChunkKind
+
+
+class NodeSource(BaseModel):
+    """One document behind a graph node with the places inside it that mention the node."""
+
+    document_id: str
+    title: str
+    kind: DocumentKind
+    course: Course
+    lab_id: str | None = None
+    slug: str | None = Field(
+        default=None, description="corpus page slug when the document is a lab"
+    )
+    locations: list[NodeSourceLocation] = Field(default_factory=list)
+
+
 # ---------------------------------------------------------------- generation
 
 

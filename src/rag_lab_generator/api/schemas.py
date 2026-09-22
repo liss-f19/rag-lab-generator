@@ -182,8 +182,32 @@ class ChunkPreview(BaseModel):
     text: str
 
 
+class NodeDescriptionOut(BaseModel):
+    text: str
+    model: str
+    generated_at: datetime
+
+
+class NodeSourceLocationOut(BaseModel):
+    chunk_id: str
+    label: str
+    kind: str
+
+
+class NodeSourceOut(BaseModel):
+    document_id: str
+    title: str
+    kind: str
+    course: str
+    lab_id: str | None = None
+    slug: str | None = None
+    locations: list[NodeSourceLocationOut] = Field(default_factory=list)
+
+
 class NodeChunksResponse(BaseModel):
     node_id: str
+    description: NodeDescriptionOut | None = None
+    sources: list[NodeSourceOut] = Field(default_factory=list)
     chunks: list[ChunkPreview]
 
 

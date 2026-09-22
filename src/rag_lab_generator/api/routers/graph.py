@@ -20,9 +20,12 @@ from rag_lab_generator.api.schemas import (
     GraphNodeOut,
     GraphStatsResponse,
     NodeChunksResponse,
+    NodeDescriptionOut,
+    NodeSourceOut,
     SubgraphResponse,
 )
 from rag_lab_generator.config import Settings
+from rag_lab_generator.retrieval.graph.sources import group_sources
 
 router = APIRouter(prefix="/api/graph", tags=["graph"])
 
@@ -148,8 +151,25 @@ async def node_chunks(request: Request, node_id: str = Query(min_length=1)) -> N
         mapping = await run_in_threadpool(store.chunks_for_nodes, [node_id])
         chunk_ids = list(mapping.get(node_id, []))
         fetched = await run_in_threadpool(store.fetch_chunks, chunk_ids)
+        document_ids = sorted({chunk.document_id for chunk in fetched.values()})
+        headers = await run_in_threadpool(store.fetch_document_headers, document_ids)
+        described = await run_in_threadpool(store.descriptions_for, [node_id])
+    description = described.get(node_id)
     return NodeChunksResponse(
         node_id=node_id,
+        description=(
+            NodeDescriptionOut(
+                text=description.text,
+                model=description.model,
+                generated_at=description.generated_at,
+            )
+            if description is not None
+            else None
+        ),
+        sources=[
+            NodeSourceOut.model_validate(source.model_dump(mode="json"))
+            for source in group_sources(list(fetched.values()), headers)
+        ],
         chunks=[
             ChunkPreview(
                 id=chunk.id,

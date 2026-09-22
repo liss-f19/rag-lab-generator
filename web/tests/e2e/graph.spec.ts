@@ -31,7 +31,7 @@ test('searching epoll draws nodes and opens the details of one', async ({ page }
   await nodes.first().click({ force: true })
   await expect(page.getByText(/Neighbourhood of/)).toBeVisible({ timeout: 40_000 })
   await expect(page.getByText('Selected node')).toBeVisible()
-  await expect(page.getByText('Chunks of this node')).toBeVisible()
+  await expect(page.getByText('About this node')).toBeVisible()
   await expect(page.getByText('Click a node in the graph.')).toBeHidden()
   await shot(page, '10-graph-node-details')
   expectClean(guard)

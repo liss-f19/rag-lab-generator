@@ -19,7 +19,14 @@ from pgvector.psycopg import register_vector
 from psycopg.rows import dict_row
 
 from rag_lab_generator.config import Settings
-from rag_lab_generator.models import Chunk, ChunkKind, Course, Document
+from rag_lab_generator.models import (
+    Chunk,
+    ChunkKind,
+    Course,
+    Document,
+    DocumentHeader,
+    DocumentKind,
+)
 
 SCHEMA_PATH = Path(__file__).resolve().parents[4] / "sql" / "001_schema.sql"
 
@@ -107,6 +114,31 @@ class PostgresStore:
                 ],
             )
             conn.commit()
+
+    def fetch_document_headers(self, ids: list[str]) -> dict[str, DocumentHeader]:
+        """Title, kind and metadata of the given documents, without their sections."""
+        if not ids:
+            return {}
+        with self.connection() as conn:
+            rows = conn.execute(
+                "SELECT id, course, kind, lab_id, title, metadata FROM documents"
+                " WHERE id = ANY(%s)",
+                (ids,),
+            ).fetchall()
+        headers: dict[str, DocumentHeader] = {}
+        for row in rows:
+            metadata = row["metadata"]
+            if isinstance(metadata, str):
+                metadata = json.loads(metadata)
+            headers[row["id"]] = DocumentHeader(
+                id=row["id"],
+                course=Course(row["course"]),
+                kind=DocumentKind(row["kind"]),
+                lab_id=row["lab_id"],
+                title=row["title"],
+                metadata=metadata if isinstance(metadata, dict) else {},
+            )
+        return headers
 
     def fetch_chunks(self, ids: list[str]) -> dict[str, Chunk]:
         if not ids:

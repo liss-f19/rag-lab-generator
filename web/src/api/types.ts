@@ -243,8 +243,32 @@ export interface ChunkPreview {
   text: string
 }
 
+export interface NodeDescription {
+  text: string
+  model: string
+  generated_at: string
+}
+
+export interface NodeSourceLocation {
+  chunk_id: string
+  label: string
+  kind: string
+}
+
+export interface NodeSource {
+  document_id: string
+  title: string
+  kind: string
+  course: string
+  lab_id: string | null
+  slug: string | null
+  locations: NodeSourceLocation[]
+}
+
 export interface NodeChunks {
   node_id: string
+  description: NodeDescription | null
+  sources: NodeSource[]
   chunks: ChunkPreview[]
 }
 

@@ -98,7 +98,7 @@ Three workflows under `.github/workflows/`:
 | --- | --- | --- |
 | `ci.yml` | every PR and push to `main` | pre-commit, mypy, unit + integration tests against a throwaway pgvector container, docker build |
 | `deploy.yml` | every PR (preview) and push to `main` (production) | `vercel deploy` with a project token, so collaborators need only push rights on GitHub; the PR gets a comment with the preview URL |
-| `rebuild-db.yml` | manual, or push to `main` touching `data/raw/**`, `sql/`, ingestion, retrieval or eval code | rebuilds the production database from the committed corpus: chunks of every strategy, bge-m3 vectors through the HuggingFace Inference API, the knowledge graph, then three retrieval evaluations reported in the job summary and kept as an artifact |
+| `rebuild-db.yml` | manual, or push to `main` touching `data/raw/**`, `sql/`, ingestion, retrieval or eval code | rebuilds the production database from the committed corpus: chunks of every strategy, bge-m3 vectors through the HuggingFace Inference API, the knowledge graph and its node descriptions (`graph-describe`, real model once `ANTHROPIC_API_KEY` is a secret), then three retrieval evaluations reported in the job summary and kept as an artifact |
 
 The corpus is versioned: the text part of `data/raw` (lab.xml, sources, summaries, pdf text
 sidecars, ~3 MB) is committed, pdfs and `data/external` are not. Whoever changes the corpus runs

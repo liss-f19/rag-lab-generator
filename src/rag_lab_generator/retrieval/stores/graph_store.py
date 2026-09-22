@@ -16,7 +16,14 @@ from typing import Any
 import networkx as nx
 
 from rag_lab_generator.config import Settings
-from rag_lab_generator.models import Course, EdgeKind, GraphEdge, GraphNode, NodeKind
+from rag_lab_generator.models import (
+    Course,
+    EdgeKind,
+    GraphEdge,
+    GraphNode,
+    NodeDescription,
+    NodeKind,
+)
 from rag_lab_generator.retrieval.stores.postgres import PostgresStore
 
 
@@ -93,17 +100,51 @@ class GraphStore(PostgresStore):
         self._graph = graph_from(self.list_nodes(), self.list_edges())
         return self._graph
 
-    def list_nodes(self) -> list[GraphNode]:
+    def list_nodes(self, kinds: list[NodeKind] | None = None) -> list[GraphNode]:
+        """Every node with its chunk ids, optionally restricted to some kinds."""
+        where = "WHERE n.kind = ANY(%s)" if kinds else ""
+        params: tuple[Any, ...] = ([kind.value for kind in kinds],) if kinds else ()
         with self.connection() as conn:
             rows = conn.execute(
-                """
+                f"""
                 SELECT n.*, COALESCE(
                     (SELECT array_agg(nc.chunk_id ORDER BY nc.chunk_id)
-                     FROM node_chunks nc WHERE nc.node_id = n.id), '{}') AS chunk_ids
-                FROM nodes n ORDER BY n.id
-                """
+                     FROM node_chunks nc WHERE nc.node_id = n.id), '{{}}') AS chunk_ids
+                FROM nodes n {where} ORDER BY n.id
+                """,
+                params,
             ).fetchall()
         return [_row_to_node(row) for row in rows]
+
+    # ------------------------------------------------------------ descriptions
+
+    def descriptions_for(self, node_ids: list[str]) -> dict[str, NodeDescription]:
+        """Stored descriptions of the given nodes, keyed by node id."""
+        if not node_ids:
+            return {}
+        with self.connection() as conn:
+            rows = conn.execute(
+                "SELECT node_id, text, source_hash, model, generated_at"
+                " FROM node_descriptions WHERE node_id = ANY(%s)",
+                (node_ids,),
+            ).fetchall()
+        return {row["node_id"]: NodeDescription(**row) for row in rows}
+
+    def upsert_descriptions(self, descriptions: list[NodeDescription]) -> None:
+        if not descriptions:
+            return
+        with self.connection() as conn, conn.cursor() as cur:
+            cur.executemany(
+                """
+                INSERT INTO node_descriptions (node_id, text, source_hash, model, generated_at)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (node_id) DO UPDATE SET
+                    text = EXCLUDED.text, source_hash = EXCLUDED.source_hash,
+                    model = EXCLUDED.model, generated_at = EXCLUDED.generated_at
+                """,
+                [(d.node_id, d.text, d.source_hash, d.model, d.generated_at) for d in descriptions],
+            )
+            conn.commit()
 
     def list_edges(self) -> list[GraphEdge]:
         with self.connection() as conn:

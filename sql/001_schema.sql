@@ -77,6 +77,16 @@ CREATE TABLE IF NOT EXISTS edges (
 CREATE INDEX IF NOT EXISTS edges_dst_idx ON edges(dst);
 
 -- Evaluation runs: one row per (rag, chunker, searcher, embedder) configuration run.
+-- Generated node descriptions. No FK on purpose: graph-build recreates nodes under the same
+-- ids and the text must survive; source_hash tells graph-describe whether a node changed.
+CREATE TABLE IF NOT EXISTS node_descriptions (
+    node_id      TEXT PRIMARY KEY,
+    text         TEXT NOT NULL,
+    source_hash  TEXT NOT NULL,
+    model        TEXT NOT NULL,
+    generated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS eval_runs (
     id          SERIAL PRIMARY KEY,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),

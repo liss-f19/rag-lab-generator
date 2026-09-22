@@ -2,9 +2,10 @@
 Role:   Typer sub-app with the knowledge-graph commands, merged into the root `rag-lab` CLI.
 Input:  CLI options; Postgres rows written by ingestion and chunking.
 Output: Graph rows in Postgres, console tables, exported graphml/dot files.
-Flow:   graph-build rebuilds the graph, graph-stats prints the counts, graph-neighbors walks a
-        node's neighbourhood, graph-export writes the graph for Gephi/Graphviz and graph-query
-        runs the graph RAG and prints the retrieved chunks together with their node paths.
+Flow:   graph-build rebuilds the graph, graph-describe generates the node descriptions with the
+        configured llm, graph-stats prints the counts, graph-neighbors walks a node's
+        neighbourhood, graph-export writes the graph for Gephi/Graphviz and graph-query runs the
+        graph RAG and prints the retrieved chunks together with their node paths.
 """
 
 from pathlib import Path
@@ -29,6 +30,44 @@ def graph_build(
 
     stats = build_graph(get_settings(), strategy, list(course) if course else None)
     _print_counts("graph build", stats)
+
+
+@app.command("graph-describe")
+def graph_describe(
+    kind: list[str] | None = typer.Option(
+        None, "--kind", help="node kinds to describe; default concept, api_function, lecture"
+    ),
+    force: bool = typer.Option(
+        False, "--force", help="regenerate even when the sources are unchanged"
+    ),
+    limit: int = typer.Option(0, "--limit", help="stop after this many nodes; 0 means all"),
+    llm: str = typer.Option("", "--llm", help="llm provider name; default from settings"),
+) -> None:
+    """Generate the short description shown for concept, api and lecture nodes."""
+    from rich.progress import Progress
+
+    from rag_lab_generator import registry
+    from rag_lab_generator.config import get_settings
+    from rag_lab_generator.generation import llm as llm_package  # noqa: F401  (registers providers)
+    from rag_lab_generator.models import NodeKind
+    from rag_lab_generator.retrieval.graph.describer import describe_nodes
+    from rag_lab_generator.retrieval.stores.graph_store import GraphStore
+
+    settings = get_settings()
+    model = registry.create("llm", llm or settings.llm_provider, settings=settings)
+    kinds = [NodeKind(name) for name in kind] if kind else None
+    with Progress(console=console, transient=True) as progress:
+        task = progress.add_task("describing nodes", total=None)
+        report = describe_nodes(
+            GraphStore(settings),
+            model,
+            kinds,
+            force=force,
+            limit=limit or None,
+            progress=lambda node: progress.update(task, advance=1, description=node.id[:60]),
+        )
+    _print_counts("graph describe", report.model_dump(exclude={"model"}))
+    console.print(f"model: {report.model}")
 
 
 @app.command("graph-stats")

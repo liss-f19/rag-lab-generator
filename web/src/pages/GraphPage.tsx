@@ -3,8 +3,8 @@
  * Input:  A label query, a hop count and the clicked node; /api/graph/*.
  * Output: The force layout of the current subgraph plus a details panel for the selected node.
  * Flow:   A label search seeds the view; selecting a node switches the query to /neighbors with
- *         the chosen hop count, and the side panel fetches the chunks attached to that node so
- *         the graph and the retrieval corpus stay connected.
+ *         the chosen hop count, and the side panel fetches the generated description and the
+ *         grouped sources of that node so the graph and the retrieval corpus stay connected.
  */
 import { useState } from 'react'
 
@@ -12,6 +12,7 @@ import { useGraphNeighbors, useGraphSearch, useGraphStats, useNodeChunks } from 
 import type { ChunkPreview } from '../api/types'
 import { ChunkPanel } from '../components/ChunkPanel'
 import { GraphView } from '../components/GraphView'
+import { NodeSummary } from '../components/NodeSummary'
 import { KIND_COLORS } from '../components/graphKinds'
 import {
   Badge,
@@ -134,34 +135,11 @@ export function GraphPage() {
               )}
             </Panel>
 
-            <Panel title="Chunks of this node">
+            <Panel title="About this node">
               {!center && <p className="text-xs text-slate-500">No node selected.</p>}
               {center && chunks.isLoading && <Spinner />}
               {center && chunks.isError && <ErrorBox error={chunks.error} />}
-              {center && chunks.data && chunks.data.chunks.length === 0 && (
-                <p className="text-xs text-slate-500">This node has no attached chunks.</p>
-              )}
-              <ul className="space-y-2">
-                {(chunks.data?.chunks ?? []).map((chunk) => (
-                  <li key={chunk.id}>
-                    <button
-                      type="button"
-                      onClick={() => setInspected(chunk)}
-                      className="w-full rounded-lg border border-slate-200 p-2 text-left hover:border-indigo-400 dark:border-slate-800"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <Badge tone="info">{chunk.kind}</Badge>
-                        <span className="truncate font-mono text-[11px] text-slate-500">
-                          {chunk.section_id ?? chunk.document_id}
-                        </span>
-                      </span>
-                      <span className="mt-1 line-clamp-2 block text-xs text-slate-600 dark:text-slate-300">
-                        {chunk.text}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              {center && chunks.data && <NodeSummary data={chunks.data} onInspect={setInspected} />}
             </Panel>
           </div>
         </div>
