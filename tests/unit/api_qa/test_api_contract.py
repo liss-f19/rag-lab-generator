@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 from rag_lab_generator.api.app import create_app
 from rag_lab_generator.api.deps import db_reachable
 from rag_lab_generator.config import Settings
+from rag_lab_generator.retrieval.stores.postgres import PostgresStore
 
 DEV_ORIGIN = "http://localhost:5173"
 LAB_COURSE = "sop1"
@@ -57,7 +58,16 @@ def has_corpus(settings: Settings) -> bool:
 
 @pytest.fixture(scope="module")
 def has_db(settings: Settings) -> bool:
-    return db_reachable(settings)
+    """Reachable *and* indexed: hierarchical chunks, fake vectors and graph nodes are present."""
+    if not db_reachable(settings):
+        return False
+    with PostgresStore(settings).connection() as conn:
+        row = conn.execute(
+            "SELECT (SELECT count(*) FROM chunks WHERE strategy = 'hierarchical') AS chunks,"
+            " (SELECT count(*) FROM embeddings WHERE embedder = 'fake') AS vectors,"
+            " (SELECT count(*) FROM nodes) AS nodes"
+        ).fetchone()
+    return bool(row and row["chunks"] and row["vectors"] and row["nodes"])
 
 
 def need_corpus(has_corpus: bool) -> None:
@@ -67,7 +77,7 @@ def need_corpus(has_corpus: bool) -> None:
 
 def need_db(has_db: bool) -> None:
     if not has_db:
-        pytest.skip("Postgres at settings.database_url is unreachable")
+        pytest.skip("Postgres unreachable or not indexed (rag-lab chunk / index / graph-build)")
 
 
 def retrieve(client: TestClient, **body: Any) -> Any:
