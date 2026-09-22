@@ -42,6 +42,11 @@ class PostgresStore:
             yield conn
 
     def apply_schema(self, path: Path = SCHEMA_PATH) -> None:
+        # A fresh database has no vector type yet, so the extension is created before any
+        # connection tries to register the type.
+        with psycopg.connect(self.settings.database_url) as raw:
+            raw.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            raw.commit()
         with self.connection() as conn:
             conn.execute(path.read_text(encoding="utf-8"))
             conn.commit()
