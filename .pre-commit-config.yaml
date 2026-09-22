@@ -1,3 +1,6 @@
+# data/ is verbatim source material and results/ holds generated eval output: no hook rewrites them.
+exclude: ^(data|results)/
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

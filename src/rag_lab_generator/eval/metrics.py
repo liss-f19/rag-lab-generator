@@ -67,7 +67,7 @@ class EvalMetricsFull(EvalMetrics):
 def matches_target(chunk: Chunk, target: str) -> bool:
     """True when the chunk belongs to the target lab or document (exact id or id prefix)."""
     document_id = chunk.document_id.split("@", 1)[0]
-    if chunk.lab_id == target or document_id == target:
+    if target in (chunk.lab_id, document_id):
         return True
     return document_id.startswith(f"{target}/")
 

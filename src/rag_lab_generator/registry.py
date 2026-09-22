@@ -26,7 +26,7 @@ _STRATEGY_PACKAGES: tuple[str, ...] = (
 )
 
 _REGISTRY: dict[str, dict[str, type]] = defaultdict(dict)
-_loaded = False
+_LOADED_PACKAGES: set[str] = set()
 
 
 class UnknownStrategyError(LookupError):
@@ -48,12 +48,10 @@ def register(kind: str, name: str) -> Callable[[T], T]:
 
 
 def load_all() -> None:
-    global _loaded
-    if _loaded:
-        return
     for package in _STRATEGY_PACKAGES:
-        importlib.import_module(package)
-    _loaded = True
+        if package not in _LOADED_PACKAGES:
+            importlib.import_module(package)
+            _LOADED_PACKAGES.add(package)
 
 
 def get(kind: str, name: str) -> type:

@@ -40,6 +40,10 @@ EXPECTED_LABS: list[tuple[str, str]] = [
     ("sop2", "netcat"),
 ]
 LAB_IDS = [f"{course}/{slug}" for course, slug in EXPECTED_LABS]
+# Reference pages without example tasks (their "tasks" are tutorial sections) ...
+LABS_WITHOUT_TASKS = {"sop1/l0_posix_environment", "sop1/sanitizers", "sop2/netcat"}
+# ... and without downloadable sources: no src/ files, no refs, no provenance entries.
+LABS_WITHOUT_SOURCES = {"sop1/sanitizers", "sop2/netcat"}
 
 
 def _lab_dir(course: str, slug: str) -> Path:
@@ -95,7 +99,8 @@ def test_manifest_parses_as_lab_manifest(course: str, slug: str) -> None:
     manifest = LabManifest.model_validate(json.loads(path.read_text(encoding="utf-8")))
     assert manifest.slug == slug, f"{path}: slug {manifest.slug!r} != folder {slug!r}"
     assert manifest.course.value == course, f"{path}: course {manifest.course} != {course}"
-    assert manifest.sources, f"{path}: no source provenance recorded"
+    if f"{course}/{slug}" not in LABS_WITHOUT_SOURCES:
+        assert manifest.sources, f"{path}: no source provenance recorded"
 
 
 @pytest.mark.parametrize(("course", "slug"), EXPECTED_LABS, ids=LAB_IDS)
@@ -126,7 +131,8 @@ def test_every_ref_points_at_an_existing_file(course: str, slug: str) -> None:
         if not (lab / ref).is_file():
             missing.append(f"{lab / 'lab.xml'}:{element.sourceline}: <{element.tag} ref={ref!r}>")
     assert not missing, "dangling refs:\n" + "\n".join(missing)
-    assert seen > 0, f"{lab}/lab.xml declares no code or solution refs at all"
+    if f"{course}/{slug}" not in LABS_WITHOUT_SOURCES:
+        assert seen > 0, f"{lab}/lab.xml declares no code or solution refs at all"
 
 
 @pytest.mark.parametrize(("course", "slug"), EXPECTED_LABS, ids=LAB_IDS)
@@ -135,7 +141,8 @@ def test_lab_has_sections_and_tasks(course: str, slug: str) -> None:
     sections = tree.findall(".//section")
     tasks = tree.findall(".//task")
     assert sections, f"{course}/{slug}: lab.xml has no <section>"
-    assert tasks, f"{course}/{slug}: lab.xml has no <task>"
+    if f"{course}/{slug}" not in LABS_WITHOUT_TASKS:
+        assert tasks, f"{course}/{slug}: lab.xml has no <task>"
     for section in sections:
         assert "".join(section.itertext()).strip(), (
             f"{course}/{slug}: empty <section id={section.get('id')!r}>"
@@ -157,7 +164,8 @@ def test_src_directory_is_populated(course: str, slug: str) -> None:
     src = _lab_dir(course, slug) / "src"
     assert src.is_dir(), f"{src} missing"
     files = [p for p in src.rglob("*") if p.is_file()]
-    assert files, f"{src} holds no source files"
+    if f"{course}/{slug}" not in LABS_WITHOUT_SOURCES:
+        assert files, f"{src} holds no source files"
 
 
 def _mapping() -> dict[str, object]:

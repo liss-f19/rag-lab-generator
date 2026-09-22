@@ -48,7 +48,6 @@ def graph_describe(
 
     from rag_lab_generator import registry
     from rag_lab_generator.config import get_settings
-    from rag_lab_generator.generation import llm as llm_package  # noqa: F401  (registers providers)
     from rag_lab_generator.models import NodeKind
     from rag_lab_generator.retrieval.graph.describer import describe_nodes
     from rag_lab_generator.retrieval.stores.graph_store import GraphStore

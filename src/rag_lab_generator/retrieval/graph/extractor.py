@@ -715,9 +715,7 @@ def _add_lab_links(buffer: _GraphBuffer, labs: list[LabDocument], others: list[D
         if doc.lab_id:
             buffer.add_edge(doc.lab_id, doc.id, EdgeKind.COVERED_BY_LECTURE)
 
-    ordered = sorted(
-        (lab for lab in labs if _lab_position(lab) >= 0), key=lambda lab: _lab_position(lab)
-    )
+    ordered = sorted((lab for lab in labs if _lab_position(lab) >= 0), key=_lab_position)
     for previous, following in zip(ordered, ordered[1:], strict=False):
         buffer.add_edge(previous.id, following.id, EdgeKind.PREREQUISITE_OF)
 

@@ -204,11 +204,11 @@ class VectorStore(PostgresStore):
     # ------------------------------------------------------------ statistics
 
     def count_rows(self) -> list[tuple[str, int]]:
+        counts: list[tuple[str, int]] = []
         with self.connection() as conn:
-            counts = [
-                (table, int(conn.execute(f"SELECT count(*) AS n FROM {table}").fetchone()["n"]))  # type: ignore[index]
-                for table in COUNTED_TABLES
-            ]
+            for table in COUNTED_TABLES:
+                row = conn.execute(f"SELECT count(*) AS n FROM {table}").fetchone()
+                counts.append((table, int(row["n"]) if row else 0))
         return counts
 
     def count_chunks_by_strategy(self) -> list[tuple[str, int]]:

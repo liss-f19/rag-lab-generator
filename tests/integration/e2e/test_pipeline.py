@@ -140,9 +140,13 @@ def _digits(proc: subprocess.CompletedProcess[str]) -> list[str]:
 
 READDIR_QUERY = "how to read directory entries with readdir"
 EPOLL_QUERY = "how does epoll differ from select"
+# The CLI prints lab ids (sop1/l1), never folder slugs; the fake embedder hashes text into
+# random vectors, so only the searchers with a lexical side can be expected to find a lab.
+FILESYSTEM_LAB = "sop1/l1"
+EPOLL_LAB = "sop2/l7"
 
 
-@pytest.mark.parametrize("searcher", ["lexical", "dense", "hybrid_rrf"])
+@pytest.mark.parametrize("searcher", ["lexical_idf", "hybrid_rrf_idf"])
 def test_query_finds_the_filesystem_lab(searcher: str) -> None:
     proc = run(
         "query",
@@ -156,8 +160,8 @@ def test_query_finds_the_filesystem_lab(searcher: str) -> None:
         "--embedder",
         "fake",
     )
-    assert "l1_filesystem" in _output(proc), (
-        f"searcher {searcher} did not surface sop1/l1_filesystem:\n{_output(proc)[:4000]}"
+    assert FILESYSTEM_LAB in _output(proc), (
+        f"searcher {searcher} did not surface {FILESYSTEM_LAB}:\n{_output(proc)[:4000]}"
     )
 
 
@@ -188,12 +192,12 @@ def test_graph_rag_answers_the_epoll_question() -> None:
         "--embedder",
         "fake",
     )
-    assert "l7_sockets_epoll" in _output(proc), _output(proc)[:4000]
+    assert EPOLL_LAB in _output(proc), _output(proc)[:4000]
 
 
 def test_graph_query_command() -> None:
     proc = run("graph-query", EPOLL_QUERY, "--embedder", "fake")
-    assert "l7_sockets_epoll" in _output(proc), _output(proc)[:4000]
+    assert EPOLL_LAB in _output(proc), _output(proc)[:4000]
 
 
 def test_graph_stats_reports_nodes_and_edges() -> None:

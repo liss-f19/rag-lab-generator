@@ -13,7 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from rag_lab_generator import __version__
 from rag_lab_generator.api import deps
-from rag_lab_generator.api.routers import chat, corpus, eval, graph, retrieval
+from rag_lab_generator.api.routers import chat, corpus, graph, retrieval
+from rag_lab_generator.api.routers import eval as eval_router
 from rag_lab_generator.api.schemas import HealthResponse
 from rag_lab_generator.config import Settings, get_settings
 
@@ -35,7 +36,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    for module in (corpus, retrieval, graph, chat, eval):
+    for module in (corpus, retrieval, graph, chat, eval_router):
         app.include_router(module.router)
 
     @app.get("/api/health", response_model=HealthResponse, tags=["health"])

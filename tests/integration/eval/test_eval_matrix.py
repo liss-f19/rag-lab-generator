@@ -2,9 +2,9 @@
 Role:   Read-only integration test of the eval stack against the shared corpus in Postgres.
 Input:  DATABASE_URL from Settings; the chunks, embeddings and graph rows already indexed.
 Output: pytest assertions; nothing is written to the database.
-Flow:   Reads the prerequisites, then builds one tiny configuration (lexical searcher, the
-        hierarchical chunks, the offline embedder) and runs three gold queries through it,
-        asserting that the context is capped at k, carries real chunks and scores a hit.
+Flow:   Reads the prerequisites, then builds one tiny configuration (idf-weighted lexical
+        searcher, the hierarchical chunks, the offline embedder) and runs three gold queries
+        through it, asserting that the context is capped at k, carries real chunks and hits.
 """
 
 import pytest
@@ -15,7 +15,7 @@ from rag_lab_generator.eval.queries import load_queries
 
 pytestmark = pytest.mark.integration
 
-CONFIG = "vector/lexical/hierarchical/fake"
+CONFIG = "vector/lexical_idf/hierarchical/fake"
 QUERY_IDS: tuple[str, ...] = ("l1_readdir", "l2_zombie", "l5_mkfifo")
 K = 5
 

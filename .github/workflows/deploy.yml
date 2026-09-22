@@ -22,6 +22,9 @@ jobs:
     name: preview
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write   # the preview URL is posted as a PR comment
     steps:
       - uses: actions/checkout@v4
       - name: Install Vercel CLI
@@ -33,7 +36,7 @@ jobs:
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "Preview: $url" >> "$GITHUB_STEP_SUMMARY"
       - name: Comment on the pull request
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             github.rest.issues.createComment({
@@ -47,6 +50,8 @@ jobs:
     name: production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Install Vercel CLI

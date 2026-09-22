@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "src"))
 os.environ.setdefault("DATA_DIR", str(ROOT / "data"))
 
+# pylint: disable=wrong-import-position
 from rag_lab_generator.api.app import app_factory  # noqa: E402
 
 app = app_factory()
