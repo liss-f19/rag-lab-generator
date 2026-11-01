@@ -1,0 +1,66 @@
+\begin{thebibliography}{10}
+
+\bibitem{Vaswani2017}
+A.~Vaswani, N.~Shazeer, N.~Parmar, {\em et~al.}, ``Attention is all you need,''
+  in {\em Advances in Neural Information Processing Systems}, 2017.
+
+\bibitem{Ji2023}
+Z.~Ji, N.~Lee, R.~Frieske, {\em et~al.}, ``Survey of hallucination in natural
+  language generation,'' {\em ACM Computing Surveys}, vol.~55, no.~12, 2023.
+
+\bibitem{Lewis2020}
+P.~Lewis, E.~Perez, A.~Piktus, {\em et~al.}, ``Retrieval-augmented generation
+  for knowledge-intensive nlp tasks,'' in {\em Advances in Neural Information
+  Processing Systems}, 2020.
+
+\bibitem{Yan2024}
+S.-Q. Yan, J.-C. Gu, Y.~Zhu, {\em et~al.}, ``Corrective retrieval augmented
+  generation,'' {\em arXiv preprint arXiv:2401.15884}, 2024.
+
+\bibitem{Asai2024}
+A.~Asai, Z.~Wu, Y.~Wang, {\em et~al.}, ``Self-rag: Learning to retrieve,
+  generate, and critique through self-reflection,'' {\em International
+  Conference on Learning Representations}, 2024.
+
+\bibitem{Robertson2009}
+S.~Robertson and H.~Zaragoza, ``The probabilistic relevance framework: Bm25 and
+  beyond,'' {\em Foundations and Trends in Information Retrieval}, vol.~3,
+  no.~4, pp.~333--389, 2009.
+
+\bibitem{Karpukhin2020}
+V.~Karpukhin, B.~Oguz, S.~Min, {\em et~al.}, ``Dense passage retrieval for
+  open-domain question answering,'' in {\em Proceedings of EMNLP}, 2020.
+
+\bibitem{Formal2021}
+T.~Formal, B.~Piwowarski, and S.~Clinchant, ``Splade: Sparse lexical and
+  expansion model for first stage ranking,'' in {\em Proceedings of SIGIR},
+  2021.
+
+\bibitem{Khattab2020}
+O.~Khattab and M.~Zaharia, ``Colbert: Efficient and effective passage search
+  via contextualized late interaction over bert,'' in {\em Proceedings of
+  SIGIR}, 2020.
+
+\bibitem{Cormack2009}
+G.~V. Cormack, C.~L.~A. Clarke, and S.~B{\"u}ttcher, ``Reciprocal rank fusion
+  outperforms condorcet and individual rank learning methods,'' in {\em
+  Proceedings of SIGIR}, 2009.
+
+\bibitem{Thakur2021}
+N.~Thakur, N.~Reimers, A.~Daxenberger, and I.~Gurevych, ``Augmented sbert for
+  domain-specific semantic search,'' in {\em Proceedings of NAACL}, 2021.
+
+\bibitem{Guo2024}
+Y.~Guo {\em et~al.}, ``Lightrag: Simple and fast retrieval-augmented
+  generation,'' {\em arXiv preprint arXiv:2410.05779}, 2024.
+
+\bibitem{Edge2024}
+D.~Edge {\em et~al.}, ``From local to global: A graph rag approach to
+  query-focused summarization,'' {\em arXiv preprint arXiv:2404.16130}, 2024.
+
+\bibitem{Sarthi2024}
+P.~Sarthi {\em et~al.}, ``Raptor: Recursive abstractive processing for
+  tree-organized retrieval,'' {\em International Conference on Learning
+  Representations}, 2024.
+
+\end{thebibliography}
