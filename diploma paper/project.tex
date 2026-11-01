@@ -12,6 +12,7 @@
 \usepackage{lmodern}
 \usepackage{graphicx}
 \usepackage{xcolor}
+\usepackage{listings}
 \usepackage{fancyhdr}
 \usepackage{caption}
 \usepackage{tabularx}
@@ -24,6 +25,31 @@
 \usepackage{url}
 \usepackage{hyperref}
 \captionsetup[table]{position=bottom}
+
+\lstdefinestyle{codeblock}{
+    basicstyle=\ttfamily\footnotesize,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=8pt,
+    frame=single,
+    breaklines=true,
+    keepspaces=true,
+    showstringspaces=false,
+    columns=fullflexible,
+    tabsize=2,
+    captionpos=b,
+    keywordstyle=\color{blue!70!black},
+    stringstyle=\color{green!40!black},
+    commentstyle=\color{gray}
+}
+
+\lstdefinelanguage{json}{
+    morestring=[b]",
+    morekeywords={true,false,null},
+    sensitive=true
+}
+
+\lstset{style=codeblock}
 
 % -------------------------------------------------
 % Page style
@@ -1711,7 +1737,7 @@ The \texttt{POST /api/v1/documents} request uses
 \texttt{multipart/form-data}. The \texttt{file} part contains the
 source document, and the \texttt{metadata} part contains JSON:
 
-\begin{verbatim}
+\begin{lstlisting}[language=json, numbers=none]
 {
   "course_id": "operating-systems",
   "knowledge_base": "primary",
@@ -1721,7 +1747,7 @@ source document, and the \texttt{metadata} part contains JSON:
   "learning_outcomes": ["LO-3"],
   "authority_level": "course"
 }
-\end{verbatim}
+\end{lstlisting}
 
 The \texttt{knowledge\_base} value is either \texttt{primary} or
 \texttt{supplementary}. The primary knowledge base is authoritative
@@ -1730,20 +1756,20 @@ outcomes, and assessment criteria. Supplementary sources may
 support prerequisites, context, hints, and optional extensions.
 The response is \texttt{202 Accepted}:
 
-\begin{verbatim}
+\begin{lstlisting}[language=json, numbers=none]
 {
   "document_id": "1c3645c2-9b91-4a2d-b91e-98b401301111",
   "ingestion_status": "queued",
   "job_id": "7ebf9105-0eb7-4a4b-83b8-2e5abc89d222"
 }
-\end{verbatim}
+\end{lstlisting}
 
 \subsection*{Assignment generation request}
 
 The \texttt{POST /api/v1/assignments/generate} request accepts the
 pedagogical configuration required by the assignment specification:
 
-\begin{verbatim}
+\begin{lstlisting}[language=json, numbers=none]
 {
   "course_id": "operating-systems",
   "topic": "process synchronization",
@@ -1754,20 +1780,20 @@ pedagogical configuration required by the assignment specification:
   "expected_duration_minutes": 120,
   "assignment_format": "individual_lab"
 }
-\end{verbatim}
+\end{lstlisting}
 
 The server selects the default retrieval architecture for standard
 use. Evaluation runs select an architecture through their saved
 experiment configuration. The generation request returns
 \texttt{202 Accepted}:
 
-\begin{verbatim}
+\begin{lstlisting}[language=json, numbers=none]
 {
   "job_id": "8e20742d-96c8-4f4f-9ea1-a7ea8d7e3333",
   "status": "queued",
   "status_url": "/api/v1/jobs/8e20742d-96c8-4f4f-9ea1-a7ea8d7e3333"
 }
-\end{verbatim}
+\end{lstlisting}
 
 Clients poll the status URL. A successful job result contains an
 assignment identifier and a validation state. An assignment is
@@ -1786,7 +1812,7 @@ retrievable excerpt. Claim-level evidence identifiers refer to
 entries in \texttt{source\_evidence}. A successful response has
 this structure:
 
-\begin{verbatim}
+\begin{lstlisting}[language=json, numbers=none]
 {
   "assignment_id": "9f31853e-a7d9-4c54-8fb2-b8fb94aa4444",
   "status": "complete",
@@ -1834,7 +1860,7 @@ this structure:
     "issues": []
   }
 }
-\end{verbatim}
+\end{lstlisting}
 
 When required evidence is missing, contradicted, or unsupported,
 the affected claim or requirement is returned as a structured
@@ -1843,7 +1869,7 @@ validation issue classified as \texttt{unsupported},
 is marked \texttt{incomplete} and cannot be exported as a validated
 assignment. For example:
 
-\begin{verbatim}
+\begin{lstlisting}[language=json, numbers=none]
 {
   "assignment_id": "9f31853e-a7d9-4c54-8fb2-b8fb94aa4444",
   "status": "incomplete",
@@ -1860,7 +1886,7 @@ assignment. For example:
     ]
   }
 }
-\end{verbatim}
+\end{lstlisting}
 
 \subsection*{Error responses}
 
@@ -1876,7 +1902,7 @@ for invalid state transitions or incomplete-assignment export,
 formats, and \texttt{422 Unprocessable Entity} for schema or
 business-rule validation failures.
 
-\begin{verbatim}
+\begin{lstlisting}[language=json, numbers=none]
 {
   "error": {
     "code": "UNSUPPORTED_DOCUMENT_FORMAT",
@@ -1887,7 +1913,7 @@ business-rule validation failures.
     "request_id": "req_01J8ZC20"
   }
 }
-\end{verbatim}
+\end{lstlisting}
 
 % =================================================
 % 9 Planned Database Schema
@@ -1905,7 +1931,11 @@ Chroma collection and record identifiers. Foreign keys preserve
 the relationships between courses, knowledge bases, documents,
 fragments, generated claims, and supporting evidence.
 
-\begin{verbatim}
+\begin{lstlisting}[
+    language=SQL,
+    caption={Relational database schema},
+    label={lst:database-schema}
+]
 -- User accounts and application roles
 CREATE TABLE users (
     user_id UUID PRIMARY KEY,
@@ -2180,7 +2210,7 @@ CREATE INDEX idx_evaluation_runs_benchmark
     ON evaluation_runs(benchmark_set_id, created_at DESC);
 CREATE INDEX idx_execution_logs_job_time
     ON execution_logs(job_id, recorded_at);
-\end{verbatim}
+\end{lstlisting}
 
 % =================================================
 % 10 Bibliography
