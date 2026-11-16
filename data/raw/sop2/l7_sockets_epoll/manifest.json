@@ -1,0 +1,69 @@
+{
+  "lab_id": "sop2/l7",
+  "course": "sop2",
+  "slug": "l7_sockets_epoll",
+  "generated_at": "2026-09-22T09:14:50.713188",
+  "sources": [
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l7/l7-1_client_local.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l7_sockets_epoll/src/l7-1_client_local.c",
+      "sha256": "94b5a1bfd19df4d42f6d7b9913ad6d314166f1f816ce70ad2ea2b32673f09d41",
+      "fetched_at": "2026-09-22T09:14:50.701296"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l7/l7-1_client_tcp.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l7_sockets_epoll/src/l7-1_client_tcp.c",
+      "sha256": "af54f4fb7afb200198a0b7e084df55c13bf173947dcc7b31f6e5b595eee94277",
+      "fetched_at": "2026-09-22T09:14:50.701446"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l7/l7-1_server.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l7_sockets_epoll/src/l7-1_server.c",
+      "sha256": "d2637e5e35552b1a4b609c5f87c3f44f5e2e97200b04835d08d067a3f5146de5",
+      "fetched_at": "2026-09-22T09:14:50.701919"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l7/l7_common.h",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l7_sockets_epoll/src/l7_common.h",
+      "sha256": "52a2e584ea87dc73d2dc0caa754a97e6c21045fa4b1432298b88a7cc70275b53",
+      "fetched_at": "2026-09-22T09:14:50.702074"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop2l8e3-4.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l7_sockets_epoll/src/sop2l8e3-4.zip",
+      "sha256": "6fd232f7f3af742e00356f3c5d1a2c96214287a613c7f2eb4cf0bff5e3eea1e0",
+      "fetched_at": "2026-09-22T09:14:50.704581"
+    }
+  ],
+  "slides": [
+    "sop2_networks__Inet_1en_5.pdf",
+    "sop2_networks__Inet_1en_5.txt",
+    "sop2_networks__index.md",
+    "sop2_networks__slides.md",
+    "sop2_servers__Inet_3en_4.pdf",
+    "sop2_servers__Inet_3en_4.txt",
+    "sop2_servers__index.md",
+    "sop2_servers__slides.md",
+    "sop2_sockets__Inet_2en_9.pdf",
+    "sop2_sockets__Inet_2en_9.txt",
+    "sop2_sockets__index.md",
+    "sop2_sockets__slides.md"
+  ],
+  "extra": [
+    "lecture_1.pdf",
+    "lecture_1.txt",
+    "lecture_3.pdf",
+    "lecture_3.txt",
+    "lecture_4.pdf",
+    "lecture_4.txt",
+    "lecture_9.pdf",
+    "lecture_9.txt"
+  ],
+  "src": [
+    "l7-1_client_local.c",
+    "l7-1_client_tcp.c",
+    "l7-1_server.c",
+    "l7_common.h",
+    "sop2l8e3-4.zip"
+  ]
+}

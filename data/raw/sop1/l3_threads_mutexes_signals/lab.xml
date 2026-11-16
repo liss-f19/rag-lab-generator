@@ -1,0 +1,1337 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<lab id="sop1/l3" course="sop1" number="3" slug="l3_threads_mutexes_signals" lang="en" source_url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/">
+  <title>Threads, mutexes and signals</title>
+  <topics>
+    <topic>pthread_create</topic>
+    <topic>NULL</topic>
+    <topic>pthread_attr_destroy</topic>
+    <topic>pthread_join</topic>
+    <topic>pthreads</topic>
+    <topic>rand</topic>
+    <topic>rand_r</topic>
+    <topic>pthread_attr_init</topic>
+    <topic>PTHREAD_CREATE_DETACHED</topic>
+    <topic>pthread_attr_setdetachstate</topic>
+    <topic>pthread_attr_getdetachstate</topic>
+    <topic>pthread_detach</topic>
+    <topic>pthread_self</topic>
+    <topic>pthread_mutex_init</topic>
+    <topic>pthread_mutex_destroy</topic>
+    <topic>pthread_mutexattr_destroy</topic>
+    <topic>pthread_mutex_lock</topic>
+    <topic>pthread_mutex_unlock</topic>
+    <topic>sigwait</topic>
+    <topic>pthread_kill</topic>
+    <topic>pthread_sigmask</topic>
+    <topic>pthread_cancel</topic>
+    <topic>PTHREAD_CANCEL_DISABLE</topic>
+    <topic>PTHREAD_CANCEL_ENABLE</topic>
+    <topic>PTHREAD_CANCEL_DEFERRED</topic>
+    <topic>PTHREAD_CANCEL_ASYNCHRONOUS</topic>
+    <topic>pthread_setcancelstate</topic>
+    <topic>pthread_exit</topic>
+    <topic>pthread_cleanup_push</topic>
+    <topic>pthread_cleanup_pop</topic>
+    <topic>PTHREAD_CANCELED</topic>
+    <topic>time</topic>
+    <topic>clock_getres</topic>
+  </topics>
+  <tutorial>
+    <section id="tutorial-3-threads-mutexes-and-signals" title="Tutorial 3 - Threads, mutexes and signals" level="1" order="0" parent="">
+      <text><![CDATA[# Tutorial 3 - Threads, mutexes and signals
+
+
+> Introduction notes:
+>
+> - Quick look at this material will not suffice, you should compile and run all the programs, check how they work, read
+>   additional materials like man pages. As you read the material please do all the exercises and questions. At the end
+>   you will find sample task similar to the one you will do during the labs, please do it at home.
+> - You will find additional information in yellow sections, questions and tasks in blue ones. Under the question you will
+>   find the answer, to see it you have to click. Please try to answer on you own before checking.
+> - Full programs' codes are placed as attachments at the bottom of this page. On this page only vital parts of the code
+>   are displayed
+> - Codes, information and tasks are organized in logical sequence, in order to fully understand it you should follow this
+>   sequence. Sometimes former task makes context for the next one and it is harder to comprehend it without the study of
+>   previous parts.
+> - Most of exercises require command line to practice, I usually assume that all the files are placed in the current
+>   working folder and that we do not need to add path parts to file names.
+> - What you learn and practice in this tutorial will be required for the next ones. If you have a problem with this
+>   material after the graded lab you can still ask teachers for help.
+> - This tutorial is based on student's examples, it has some minor flaws in parts not related to the threads (I left them
+>   on purpose and explain them in comments). Some repeating flaws not mentioned in tasks are:
+>   - Main functions are too long, it should be easy to split them
+>   - Bool data type requires extra header and can be easily avoided by using integers (0 and 1)
+>   - So called  "magic numbers" are left in code - those numerical constants should be replaced with "C" preprocessor macro]]></text>
+    </section>
+    <section id="thread-management" title="Thread Management" level="2" order="1" parent="tutorial-3-threads-mutexes-and-signals">
+      <text><![CDATA[## Thread Management]]></text>
+    </section>
+    <section id="creating-threads" title="Creating Threads" level="3" order="2" parent="thread-management">
+      <text><![CDATA[### Creating Threads
+A thread is created using the `pthread_create` command. Let's take a look at the declaration of this function:
+
+```
+int pthread_create(pthread_t *restrict thread,
+                  const pthread_attr_t *restrict attr,
+                  void *(*start_routine)(void*),
+                  void *restrict arg);
+```
+
+Unlike `fork`, this function returns an integer that is used to determine whether it has succeeded or failed. On success, it writes the newly created thread's handle to `thread`.
+
+The second argument is for attributes. It can be left `NULL` to use the default attributes. (See `man 3p pthread_attr_destroy` and `man -k pthread_attr_set` for additional info)
+
+When creating a thread, you have to supply a function pointer to a function of the following signature:
+
+```
+void *function(void *args);
+```
+
+This function is the function that will be executed by the newly created thread. You pass the arguments to the function via the last argument `arg`.
+
+In C, a `void*` is a pointer to anything. You can not refer to the underlying value without casting to the actual type, e.g `int*`.
+
+`pthread_t` is implementation defined and should be treated as such. (i.e you can't use it like an integer)
+
+More information:
+```
+man 3p pthread_create
+```]]></text>
+    </section>
+    <section id="thread-joining" title="Thread Joining" level="3" order="3" parent="thread-management">
+      <text><![CDATA[### Thread Joining
+Much like child processes, a thread should also be joined after it finishes its work. This can be achieved using the `pthread_join` command.
+
+```
+int pthread_join(pthread_t thread, void **value_ptr);
+```
+
+`pthread_join` functions similarly to `wait`, blocking until the thread finishes. POSIX doesn't define a non-blocking join function.
+
+Like `pthread_create`, this function returns an integer to indicate success or failure. The thread function's return value is written to `value_ptr` if non-NULL storage was provided.
+
+Unlike with processes, you have to precisely specify which thread you're waiting for by providing a valid thread identifier.
+
+More information:
+```
+man 3p pthread_join
+```]]></text>
+    </section>
+    <section id="excercise" title="Excercise" level="3" order="4" parent="thread-management">
+      <text><![CDATA[### Excercise
+
+Goal: 
+Write a program to approximate PI value with Monte Carlo method, program takes the following parameters:
+- k ... number of threads used to approximate,
+- n ... number of random tries of each thread.
+    
+Each thread (except for the main) should conduct its own estimation, 
+at the end the main thread gathers the results from co-threads and calculate the average value from all the sub-results. 
+        
+What you need to know:
+- man 7 pthreads
+- man 3p pthread_create
+- man 3p pthread_join
+- man 3p rand (especially  rand_r)
+- Monte-Carlo method, in paragraph "Monte Carlo methods" on this <a href="https://en.wikipedia.org/wiki/Pi#Monte_Carlo_methods"> site.</a>]]></text>
+    </section>
+    <section id="solution" title="Solution" level="3" order="5" parent="thread-management">
+      <text><![CDATA[### Solution
+
+**Makefile**:
+
+```makefile
+CC=gcc
+CFLAGS=-std=gnu99 -Wall -fsanitize=address,undefined
+LDFLAGS=-fsanitize=address,undefined
+LDLIBS=-lpthread
+```
+
+Flag `-lpthread` is mandatory for all compilations in this tutorial. Linked library is called libpthread.so (after -l we
+write the name of the library without first "lib" part)
+
+**prog17.c**:
+
+```c
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define ERR(source) (perror(source), fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), exit(EXIT_FAILURE))
+
+typedef struct targs
+{
+    pthread_t tid;
+    unsigned int seed;
+    int samples_count;
+} targs_t;
+
+void* pi_estimation(void* args);
+
+void usage(char* pname)
+{
+    fprintf(stderr, "Usage: %s [num_threads > 0] [num_samples > 0]\n", pname);
+    exit(EXIT_FAILURE);
+}
+
+void create_threads(int thread_count, int samples_count, targs_t** estimations)
+{
+    *estimations = malloc(sizeof(targs_t) * thread_count);
+    if (estimations == NULL)
+        ERR("malloc");
+
+    targs_t* targs = *estimations;
+
+    srand(time(NULL));
+    for (int i = 0; i < thread_count; i++)
+    {
+        targs[i].seed = rand();
+        targs[i].samples_count = samples_count;
+
+        if (pthread_create(&(targs[i].tid), NULL, pi_estimation, &targs[i]) != 0)
+            ERR("pthread_create");
+    }
+}
+
+int main(int argc, char** argv)
+{
+    if (argc != 3)
+        usage(argv[0]);
+
+    int thread_count = atoi(argv[1]);
+    int samples_count = atoi(argv[2]);
+
+    if (thread_count <= 0 || samples_count <= 0)
+        usage(argv[0]);
+
+    targs_t* estimations;
+    create_threads(thread_count, samples_count, &estimations);
+
+    int* subresult = NULL;
+    int cumulative_result = 0;
+    for (int i = 0; i < thread_count; i++)
+    {
+        if (pthread_join(estimations[i].tid, (void**)&subresult) != 0)
+            ERR("pthread_join");
+
+        if (NULL != subresult)
+        {
+            cumulative_result += *subresult;
+            free(subresult);
+        }
+    }
+
+    const double sum_avg = (double)cumulative_result / (double)thread_count;
+    const double pi_estimate = (2.0 * (double)samples_count) / (sum_avg * sum_avg);
+    printf("Estimated value of PI is %f\n", pi_estimate);
+
+    free(estimations);
+}
+
+void* pi_estimation(void* void_ptr)
+{
+    targs_t* args = void_ptr;
+    int* result = malloc(sizeof(int));
+    if (result == NULL)
+        ERR("malloc");
+
+    int inner_count = 0;
+    for (int i = 0; i < args->samples_count; i++)
+    {
+        inner_count += (rand_r(&args->seed) % 2) ? 1 : -1;
+    }
+
+    *result = abs(inner_count);
+
+    return result;
+}
+```]]></text>
+      <code ref="src/prog17.c" lang="c"/>
+    </section>
+    <section id="notes-and-questions" title="Notes and questions" level="3" order="6" parent="thread-management">
+      <text><![CDATA[### Notes and questions
+
+Functions' declarations at the beginning of the code (not the functions definitions) are quite useful, sometimes
+mandatory. If you do not know the difference please
+read <a href="http://en.cppreference.com/w/c/language/function_declaration"> this</a>.
+
+In multi threaded processes you can not correctly use `rand()` function, use `rand_r()` instead. The later one requires
+individual seed for every thread.
+
+This program uses the simplest schema for threads lifetime. It creates some threads and then immediately waits for them
+to finish. More complex scenarios are possible
+
+Please keep in mind that nearly every call to system function (and most calls to library functions) should be followed
+with the test on errors and if necessary by the proper reaction on the error.
+
+ERR macro does not send "kill" signal as in multi-process program, why?
+
+**Answer:** Call to exit terminates all the threads in current process, there is no need to "kill" other processes.
+
+
+How is input data passed to the new threads?
+
+**Answer:** Exclusively by the pointer to structure targs_t that is passed as thread function arguments. There is no need (nor the excuse) to use global variables!
+
+
+Is the thread input data shared between the threads?
+
+**Answer:** Not in this program. In this case there is no need to synchronize the access to this data. Each thread gets a pointer to the private copy of the structure.
+
+
+How the random seed for `rand_r()` is prepared for each thread?
+
+**Answer:** It is randomized in the main thread and passed as a part of input data in targs_t.
+
+
+In this multi thread program we see srand/rand calls, is this correct? It contradicts what was said a few lines above.
+
+**Answer:** Only one thread is using srand/rand and those functions are called before working threads come to life. The problem with srand/rand and threads originates from one global variable used in the library to hold the current seed. In this code only on thread access this seed thus it is correct.
+
+
+Can we share one input data structure for all the threads instead of having a copy for every thread?
+
+**Answer:** Not in this program due to random seed, it must be different for all the threads.
+
+
+Can we make the array with the thread input data automatic variable (not allocated)? 
+
+**Answer:** Only if we add some limit on the number of working threads (up to 1000) otherwise this array may use all the stack of the main thread.
+
+
+Why do we need to release the memory returned from the working thread?
+
+**Answer:** This memory was allocated in the thread and has to be released somewhere in the same process, The heap is shared by all the threads if you do not release it you will leak the memory. It will not be released automatically on the thread termination.
+
+
+Why can't we return the data as the address of local (to the thread) automatic variable? 
+
+**Answer:** The moment thread terminates is the moment of its stack memory release. If you have a pointer to this released stack you should not use it as this memory can be overwritten immediately. What worse, in most cases this memory will stil be the same and faulty program will work in 90% of cases. If you make this kind of mistake it is later very hard to find out why sometimes your code fails. Please be careful and try to avoid this flaw.
+
+
+Can we avoid memory allocation in the working thread?
+
+**Answer:** Yes, if we add extra variable to the input structure of the thread. The result can then be stored in this variable.]]></text>
+    </section>
+    <section id="detachable-threads-synchronization" title="Detachable threads &amp; Synchronization" level="2" order="7" parent="tutorial-3-threads-mutexes-and-signals">
+      <text><![CDATA[## Detachable threads & Synchronization]]></text>
+    </section>
+    <section id="overview" title="Overview" level="3" order="8" parent="detachable-threads-synchronization">
+      <text><![CDATA[### Overview
+
+A detached thread is a thread that you need not join. While it's convenient, it also has downsides, such as not knowing when thread execution ends, as it is not joinable. Because of that, you can't be sure that a thread has actually terminated, which can lead to problems when exiting from the main thread.
+
+Another issue with detached threads is not being able to obtain anything from them without extra synchronization.
+
+There are two ways to obtain a detached thread, those being either spawning a detached thread or manually detaching an already running thread.]]></text>
+    </section>
+    <section id="spawning-a-detached-thread" title="Spawning a detached thread" level="3" order="9" parent="detachable-threads-synchronization">
+      <text><![CDATA[### Spawning a detached thread
+
+In order to spawn a detached thread, you must first create a `pthread_attr_t` object that will later be passed to the `pthread_create` function. In order to initialize one to the default state, you must call `pthread_attr_init`. Then, you have to set its detached state to `PTHREAD_CREATE_DETACHED` using the `pthread_attr_setdetachstate` function. Since you have to initialize the attributes structure, you also have to destroy it later using `pthread_attr_destroy`.
+
+More information:
+```
+man 3p pthread_attr_destroy
+man 3p pthread_attr_getdetachstate
+man 3p pthread_create
+```]]></text>
+    </section>
+    <section id="detaching-a-running-thread" title="Detaching a running thread" level="3" order="10" parent="detachable-threads-synchronization">
+      <text><![CDATA[### Detaching a running thread
+
+As mentioned above, you may also detach a running thread. You can do it by calling `pthread_detach` with the thread's handle. A thread may detach itself in this way by first obtaining its own handle via a `pthread_self` call, and then calling `pthread_detach`. Attempting to detach a thread that's already detached results in undefined behavior and shouldn't be done.
+
+More information:
+```
+man 3p pthread_detach
+man 3p pthread_self
+```]]></text>
+    </section>
+    <section id="mutual-exclusion" title="Mutual exclusion" level="3" order="11" parent="detachable-threads-synchronization">
+      <text><![CDATA[### Mutual exclusion
+Since a detached thread on its own is effectively useless, we are introducing shared state between the threads. It means that two or more threads have to work on the same structure. This is problematic, as we currently have no way of ensuring that a thread won't write to a field that is currently being read by another thread. (and vice versa)
+
+This is where mutexes come into play. In short - a mutex is a special object that prevents two or more threads from holding it at the same time. It is recommended to read more about mutexes if you don't know what a mutex is.
+
+You initialize a mutex by calling the `pthread_mutex_init` function. You would later destroy it by calling the `pthread_mutex_destroy` function.
+```
+int pthread_mutex_init(pthread_mutex_t *restrict mutex,
+   const pthread_mutexattr_t *restrict attr);
+```
+Like `pthread_create`, `pthread_mutex_init` also accepts an attributes object. Similarly, it can be `NULL` to use the default attributes. (See `man 3p pthread_mutexattr_destroy` and `man -k pthread_mutexattr_set` for additional info)
+
+
+
+Just creating a mutex isn't enough, you also need to acquire it when accessing shared state. That can be done using `pthread_mutex_lock`. This function blocks until it can acquire the mutex, then tries to acquire it. While it can fail, its failure usually indicates serious memory corruption or very specyfic situation (more on this on OPS2), and thus the return value of this function won't be checked in the further examples and we don't require it during labs.
+
+After you have acquired the mutex, you should not attempt to re-acquire it before releasing. This results in a deadlock in the majority of cases.
+
+After you are done modifying the shared state, you should release the mutex by calling `pthread_mutex_unlock`, so that another thread can lock it. Ideally, you should minimize the time you're holding the mutex for, as it slows down other threads that use it.
+
+Please note that you should NEVER make copies of a mutex (e.g `pthread_mutex_t mtx1_copy = mtx1`).
+POSIX forbids that. A copy of a mutex does not have to be a working mutex! Even if it would work, it should be quite obvious, that a copy would be a different mutex.
+
+More information:
+```
+man 3p pthread_mutex_destroy
+man 3p pthread_mutex_lock
+```]]></text>
+    </section>
+    <section id="excercise-2" title="Excercise" level="3" order="12" parent="detachable-threads-synchronization">
+      <text><![CDATA[### Excercise
+
+Goal: 
+Write binomial distribution visualization program, use Bean Machine (Galton board) method with 11 bins for bens. The program takes two parameters:
+- k ... number of beans trowing threads
+- n ... total number of beans to throw
+
+Each thread throws beans separately from others, after each throw, number of beans in bins must me updated. Main thread at each second checks if the simulation has completed (not using thread_join). At the end main thread prints the content of the bins and the mean value of beans. 
+
+What you need to know:
+
+- man 3p pthread_mutex_destroy (full description)
+- man 3p pthread_mutex_lock
+- man 3p pthread_mutex_unlock
+- man 3p pthread_detach
+- man 3p pthread_attr_init
+- man 3p pthread_attr_destroy
+- man 3p pthread_attr_setdetachstate
+- man 3p pthread_attr_getdetachstate
+- Bean machine on this <a href="https://en.wikipedia.org/wiki/Bean_machine"> site.</a>]]></text>
+    </section>
+    <section id="solution-2" title="Solution" level="3" order="13" parent="detachable-threads-synchronization">
+      <text><![CDATA[### Solution
+**prog18.c**:
+
+```c
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+
+#define BIN_COUNT 11
+#define NEXT_DOUBLE(seedptr) ((double)rand_r(seedptr) / (double)RAND_MAX)
+#define ERR(source) (perror(source), fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), exit(EXIT_FAILURE))
+
+typedef struct shared_state
+{
+    int balls_waiting;
+    int bins[BIN_COUNT];
+    int balls_thrown;
+    pthread_mutex_t bins_mtx[BIN_COUNT];
+    pthread_mutex_t balls_waiting_mtx;
+    pthread_mutex_t balls_thrown_mtx;
+} shared_state_t;
+
+typedef struct thrower_args
+{
+    pthread_t tid;
+    unsigned int seed;
+    shared_state_t* shared;
+} thrower_args_t;
+
+void make_throwers(thrower_args_t** args_ptr, int num_throwers, shared_state_t* shared);
+void* throwing_func(void* args);
+int throw_ball(unsigned int* seedptr);
+
+void usage(char* pname)
+{
+    fprintf(stderr, "Usage: %s [num_balls>0] [num_throwers>0]", pname);
+    exit(EXIT_FAILURE);
+}
+
+int main(int argc, char** argv)
+{
+    int balls_count, throwers_count;
+    if (argc != 3)
+        usage(argv[0]);
+
+    balls_count = atoi(argv[1]);
+    throwers_count = atoi(argv[2]);
+
+    if (balls_count <= 0 || throwers_count <= 0)
+        usage(argv[0]);
+
+    shared_state_t shared = {
+        .balls_waiting = balls_count,
+        .balls_thrown = 0,
+        .balls_waiting_mtx = PTHREAD_MUTEX_INITIALIZER,
+        .balls_thrown_mtx = PTHREAD_MUTEX_INITIALIZER,
+        .bins = {0},
+    };
+
+    int balls_thrown = shared.balls_thrown;
+
+    for (int i = 0; i < BIN_COUNT; i++)
+    {
+        if (pthread_mutex_init(&shared.bins_mtx[i], NULL))
+            ERR("pthread_mutex_init");
+    }
+
+    thrower_args_t* args;
+    make_throwers(&args, throwers_count, &shared);
+
+    while (balls_thrown < balls_count)
+    {
+        sleep(1);
+        pthread_mutex_lock(&shared.balls_thrown_mtx);
+        balls_thrown = shared.balls_thrown;
+        pthread_mutex_unlock(&shared.balls_thrown_mtx);
+    }
+
+    int final_balls_count = 0;
+    double mean_val = 0.0;
+    for (int i = 0; i < BIN_COUNT; i++)
+    {
+        final_balls_count += shared.bins[i];
+        mean_val += shared.bins[i] * i;
+    }
+    mean_val = mean_val / final_balls_count;
+
+    printf("Bins count:\n");
+    for (int i = 0; i < BIN_COUNT; i++)
+        printf("%d\t", shared.bins[i]);
+    printf("\nTotal balls count : %d\nMean value: %f\n", final_balls_count, mean_val);
+    // for (int i = 0; i < BIN_COUNT; i++) pthread_mutex_destroy(&mxBins[i]);
+    // free(args);
+    // The resources used by detached threads cannod be freed as we are not sure
+    // if they are running yet.
+    exit(EXIT_SUCCESS);
+}
+
+void make_throwers(thrower_args_t** args_ptr, int throwers_count, shared_state_t* shared)
+{
+    *args_ptr = malloc(sizeof(thrower_args_t) * throwers_count);
+    thrower_args_t* args = *args_ptr;
+    if (args == NULL)
+        ERR("malloc");
+
+    pthread_attr_t attr;
+
+    if (pthread_attr_init(&attr))
+        ERR("pthread_attr_init");
+    if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED))
+        ERR("pthread_attr_setdetachstate");
+
+    srand(time(NULL));
+    for (int i = 0; i < throwers_count; i++)
+    {
+        args[i].seed = rand();
+        args[i].shared = shared;
+        if (pthread_create(&args[i].tid, &attr, throwing_func, &args[i]))
+            ERR("pthread_create");
+    }
+
+    pthread_attr_destroy(&attr);
+}
+
+void* throwing_func(void* void_args)
+{
+    thrower_args_t* args = void_args;
+    while (1)
+    {
+        pthread_mutex_lock(&args->shared->balls_waiting_mtx);
+        if (args->shared->balls_waiting > 0)
+        {
+            args->shared->balls_waiting--;
+            pthread_mutex_unlock(&args->shared->balls_waiting_mtx);
+        }
+        else
+        {
+            pthread_mutex_unlock(&args->shared->balls_waiting_mtx);
+            break;
+        }
+
+        int binno = throw_ball(&args->seed);
+        pthread_mutex_lock(&args->shared->bins_mtx[binno]);
+        args->shared->bins[binno]++;
+        pthread_mutex_unlock(&args->shared->bins_mtx[binno]);
+        pthread_mutex_lock(&args->shared->balls_thrown_mtx);
+        args->shared->balls_thrown++;
+        pthread_mutex_unlock(&args->shared->balls_thrown_mtx);
+    }
+    return NULL;
+}
+
+/* returns # of bin where ball has landed */
+int throw_ball(unsigned int* seedptr)
+{
+    int result = 0;
+    for (int i = 0; i < BIN_COUNT - 1; i++)
+        if (NEXT_DOUBLE(seedptr) > 0.5)
+            result++;
+    return result;
+}
+```]]></text>
+      <code ref="src/prog18.c" lang="c"/>
+    </section>
+    <section id="notes-and-questions-2" title="Notes and questions" level="3" order="14" parent="detachable-threads-synchronization">
+      <text><![CDATA[### Notes and questions
+
+Once again, all thread input data is passed as pointer to the structure `thrower_args_t`, treads results modify bins array (
+pointer in the same structure), no global variables used.
+
+In this code two mutexes protect two counters and an array of mutexes protects the bins' array (one mutex for every cell
+in the array). In total we have BIN_COUNT+2 mutexes.
+
+In this program we use detachable threads. There is no need (nor option) to wait for working threads to finish, thus
+the lack of pthread_join. As we do not join the threads, a different method must be deployed to test if the main program can
+exit.
+
+In this example mutexes are created in two ways - as automatic and dynamic variables. The first method is simpler in
+coding but you need to know exactly how many mutexes you need at coding time. The dynamic creation requires more
+coding (initiation and removal) but the amount of mutexes also is dynamic.
+
+Is data passed to threads in `thrower_args_t` structure shared between them?
+
+**Answer:** Some of it, counters and bins are shared and thus protected with mutexes.
+
+
+Why do we use a pointer to the `shared_state_t` structure?
+
+**Answer:** We share the data, without the pointer we would have independent copies of those variables in each thread.
+
+
+This program uses a lot of mutexes, can we reduce the number of them?
+
+**Answer:** Yes, in extreme case it can be reduced to only one mutex but at the cost of concurrency. In more reasonable approach you can have 2 mutexes for the counters and one for all the bins, although the concurrency is lower in this case the running time of a program can be a bit shorter as operations on mutexes are quite time consuming for the OS.
+
+
+To check if the working threads terminated, the main threads periodically  checks if the numer of thrown beans is equal to the number of beans in total. Is this optimal solution?
+
+**Answer:** No, it is so called "soft busy waiting" but without synchronization tool like conditional variable it can not be solved better.
+
+
+Do all the threads created in this program really work?
+
+**Answer:** No, especially when there is a lot of threads. It is possible that some of threads "starve". The work code for the thread is very fast, thread creation is rather slow, it is possible that last threads created will have no beans left to throw. To check it please add per thread thrown beans counters and print them on stdout at the thread termination. The problem can be avoided if we add synchronization on threads start - make them start at the same time but this again requires the methods that will be introduced later. (barier or conditional variable)]]></text>
+    </section>
+    <section id="threads-and-signals" title="Threads and Signals" level="2" order="15" parent="tutorial-3-threads-mutexes-and-signals">
+      <text><![CDATA[## Threads and Signals]]></text>
+    </section>
+    <section id="handling-signals" title="Handling signals" level="3" order="16" parent="threads-and-signals">
+      <text><![CDATA[### Handling signals
+
+When a multithreaded process receives a signal, any one of the threads that haven't blocked the signal may receive it.
+
+Another important thing to note is that asynchronous signal handlers (i.e those set by `sigaction`) are not thread-local! Setting a handler in one thread overwrites the handler for the whole process.
+
+Thankfully, you don't necessarily have to deal with that and many other limitations of signal handlers in a multithreaded program.
+
+A very common pattern for handling signals in multithreaded applications is to start a separate thread specifically for handling signals, while blocking them in the rest of your threads.
+
+This is convenient, as it removes the need for global variables while allowing you to handle signals in a synchronous way, (you just use `sigwait`) albeit at the expense of dedicating a thread to it.]]></text>
+    </section>
+    <section id="sending-a-signal" title="Sending a signal" level="3" order="17" parent="threads-and-signals">
+      <text><![CDATA[### Sending a signal
+
+Inside your process you may send a signal to a specific thread, using `pthread_kill`
+```
+int pthread_kill(pthread_t thread, int sig);
+```
+
+When you send a signal to a specific thread, only that thread will receive that signal. If the thread is blocking that signal, it will recieve it as soon as it unblocks it.
+
+More information:
+```
+man 3p pthread_kill
+```]]></text>
+    </section>
+    <section id="setting-a-signal-mask" title="Setting a signal mask" level="3" order="18" parent="threads-and-signals">
+      <text><![CDATA[### Setting a signal mask
+
+In a multithreaded program you may not use `sigprocmask` to set the signal mask. Instead, you have to call `pthread_sigmask`, which sets the thread-local signal mask.
+
+Similar to how processes inherit the mask of the parent, threads inherit the signal mask of the thread that created them.
+
+In order to fully block a signal, it must be blocked in every thread of the program, otherwise one thread may receive it and bring down the whole program if the signal isn't handled.
+
+More information:
+```
+man 3p pthread_sigmask
+```]]></text>
+    </section>
+    <section id="excercise-3" title="Excercise" level="3" order="19" parent="threads-and-signals">
+      <text><![CDATA[### Excercise
+Goal: 
+The program takes sole 'k' parameter and prints the list of numbers form 1 to k at each second. It must handle two signals in dedicated thread, the following action must be taken upon the signal arrival:
+- SIGINT  (C-c) ... removes random number from the list (do nothing if empty),
+- SIGQUIT  (C-\\) ... set program 'STOP'  flag (both threads end).
+
+What you need to know:
+
+- man 3p pthread_sigmask
+- man 3p sigwait
+
+**prog19.c**
+
+```c
+#include <errno.h>
+#include <pthread.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define MAXLINE 4096
+#define DEFAULT_ARRAYSIZE 10
+#define DELETED_ITEM -1
+#define ERR(source) (perror(source), fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), exit(EXIT_FAILURE))
+
+typedef struct argsSignalHandler
+{
+    pthread_t tid;
+    int *pArrayCount;
+    int *array;
+    pthread_mutex_t *pmxArray;
+    sigset_t *pMask;
+    bool *pQuitFlag;
+    pthread_mutex_t *pmxQuitFlag;
+} argsSignalHandler_t;
+
+void ReadArguments(int argc, char **argv, int *arraySize);
+void removeItem(int *array, int *arrayCount, int index);
+void printArray(int *array, int arraySize);
+void *signal_handling(void *);
+
+int main(int argc, char **argv)
+{
+    int arraySize, *array;
+    bool quitFlag = false;
+    pthread_mutex_t mxQuitFlag = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t mxArray = PTHREAD_MUTEX_INITIALIZER;
+    ReadArguments(argc, argv, &arraySize);
+    int arrayCount = arraySize;
+    if (NULL == (array = (int *)malloc(sizeof(int) * arraySize)))
+        ERR("Malloc error for array!");
+    for (int i = 0; i < arraySize; i++)
+        array[i] = i + 1;
+    sigset_t oldMask, newMask;
+    sigemptyset(&newMask);
+    sigaddset(&newMask, SIGINT);
+    sigaddset(&newMask, SIGQUIT);
+    if (pthread_sigmask(SIG_BLOCK, &newMask, &oldMask))
+        ERR("SIG_BLOCK error");
+    argsSignalHandler_t args;
+    args.pArrayCount = &arrayCount;
+    args.array = array;
+    args.pmxArray = &mxArray;
+    args.pMask = &newMask;
+    args.pQuitFlag = &quitFlag;
+    args.pmxQuitFlag = &mxQuitFlag;
+    if (pthread_create(&args.tid, NULL, signal_handling, &args))
+        ERR("Couldn't create signal handling thread!");
+    while (true)
+    {
+        pthread_mutex_lock(&mxQuitFlag);
+        if (quitFlag == true)
+        {
+            pthread_mutex_unlock(&mxQuitFlag);
+            break;
+        }
+        else
+        {
+            pthread_mutex_unlock(&mxQuitFlag);
+            pthread_mutex_lock(&mxArray);
+            printArray(array, arraySize);
+            pthread_mutex_unlock(&mxArray);
+            sleep(1);
+        }
+    }
+    if (pthread_join(args.tid, NULL))
+        ERR("Can't join with 'signal handling' thread");
+    free(array);
+    if (pthread_sigmask(SIG_UNBLOCK, &newMask, &oldMask))
+        ERR("SIG_BLOCK error");
+    exit(EXIT_SUCCESS);
+}
+
+void ReadArguments(int argc, char **argv, int *arraySize)
+{
+    *arraySize = DEFAULT_ARRAYSIZE;
+
+    if (argc >= 2)
+    {
+        *arraySize = atoi(argv[1]);
+        if (*arraySize <= 0)
+        {
+            printf("Invalid value for 'array size'");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void removeItem(int *array, int *arrayCount, int index)
+{
+    int curIndex = -1;
+    int i = -1;
+    while (curIndex != index)
+    {
+        i++;
+        if (array[i] != DELETED_ITEM)
+            curIndex++;
+    }
+    array[i] = DELETED_ITEM;
+    *arrayCount -= 1;
+}
+
+void printArray(int *array, int arraySize)
+{
+    printf("[");
+    for (int i = 0; i < arraySize; i++)
+        if (array[i] != DELETED_ITEM)
+            printf(" %d", array[i]);
+    printf(" ]\n");
+}
+
+void *signal_handling(void *voidArgs)
+{
+    argsSignalHandler_t *args = voidArgs;
+    int signo;
+    srand(time(NULL));
+    for (;;)
+    {
+        if (sigwait(args->pMask, &signo))
+            ERR("sigwait failed.");
+        switch (signo)
+        {
+            case SIGINT:
+                pthread_mutex_lock(args->pmxArray);
+                if (*args->pArrayCount > 0)
+                    removeItem(args->array, args->pArrayCount, rand() % (*args->pArrayCount));
+                pthread_mutex_unlock(args->pmxArray);
+                break;
+            case SIGQUIT:
+                pthread_mutex_lock(args->pmxQuitFlag);
+                *args->pQuitFlag = true;
+                pthread_mutex_unlock(args->pmxQuitFlag);
+                return NULL;
+            default:
+                printf("unexpected signal %d\n", signo);
+                exit(1);
+        }
+    }
+    return NULL;
+}
+```]]></text>
+      <code ref="src/prog19.c" lang="c"/>
+    </section>
+    <section id="notes-and-questions-3" title="Notes and questions" level="3" order="20" parent="threads-and-signals">
+      <text><![CDATA[### Notes and questions
+
+Thread input structure argsSignalHandler_t holds the shared threads data (an array and STOP flag) with protective
+mutexes and not shared (signal mask and tid of thread designated to handle the signals).
+
+How many threads run in this program?
+
+**Answer:** Two, main thread created by system (every process has one starting thread) and the thread created by the code.
+
+
+Name differences and similarities between sigwait i sigsuspend: 
+**Answer:** - sigwait does not require signal handling routine as sigsuspend
+- both functions require blocking of the anticipated signal/signals
+- sigwait can not be interrupted by signal handling function (it is POSIX requirement), sigsuspend can
+- sigwait does not change the mask of blocked signals, even if signal handler is set it will not be triggered (in this example we do not have handlers), it will be executed on sigsuspend call
+
+
+After successful call to   sigwait  only one type of pending signal is removed from the pending signals vector thus the problem we experienced with sigsuspend in L2 example can  be corrected when using sigwait instead of sigsuspend. Please correct the program in L2 as an exercise.
+
+Does the method of waiting for the end of working thread have the same flow as the method in previous example?
+
+**Answer:** No, periodical printout of the table is a part of the task, busy waiting is when looping is coded only for waiting for the condition to become true. Despite that in this example we join the thread.
+
+
+Can we use sigprocmask instead of pthread_sigmask in this program?
+
+**Answer:** Yes, the signal blocking is set prior to thread creation, still in single thread phase of the program.
+
+
+Why system calls to functions operating on mutex (acquire, release)  are not tested for errors?
+
+**Answer:** Basic mutex type (the type used in this program, default one) is not checking nor reporting errors. Adding those checks would not be such a bad idea as they are not harming the code and if you decide to later change the mutex type to error checking it will not require many changes in the code.]]></text>
+    </section>
+    <section id="thread-cancelation" title="Thread cancelation" level="2" order="21" parent="tutorial-3-threads-mutexes-and-signals">
+      <text><![CDATA[## Thread cancelation]]></text>
+    </section>
+    <section id="canceling-a-thread" title="Canceling a thread" level="3" order="22" parent="thread-cancelation">
+      <text><![CDATA[### Canceling a thread
+
+A thread can be canceled using the `pthread_cancel` function.
+This is useful when the program has to exit before it finishes its work, for example due to a signal.
+
+More information:
+```
+man 3p pthread_cancel
+```]]></text>
+    </section>
+    <section id="setting-cancelability" title="Setting cancelability" level="3" order="23" parent="thread-cancelation">
+      <text><![CDATA[### Setting cancelability
+
+A thread can choose how it will respond to cancelation requests using the following functions:
+
+```
+int pthread_setcancelstate(int state, int *oldstate);
+int pthread_setcanceltype(int type, int *oldtype);
+```
+
+Cancelation requests can be ignored by setting the cancel state to `PTHREAD_CANCEL_DISABLE` and then later re-enabled by setting it to `PTHREAD_CANCEL_ENABLE`.
+Cancelation is enabled by default.
+
+The cancel type determines when the thread exits upon receiving a cancelation request.
+It is set to `PTHREAD_CANCEL_DEFERRED` by default, in which case the thread exits at a cancelation point.
+If it is set to `PTHREAD_CANCEL_ASYNCHRONOUS`, the thread will exit as soon as possible.
+
+Generally, it is safer to keep the cancel type as `PTHREAD_CANCEL_DEFERRED`,
+as you may have an unpreventable race condition in the case of asynchronous cancelation
+(e.g a thread gets canceled after you lock a mutex but before you add a cleanup function)
+
+More information:
+```
+man 3p pthread_setcancelstate
+man 7 pthreads (specifically the "Cancelation Points" section)
+```]]></text>
+    </section>
+    <section id="cleanup-functions" title="Cleanup functions" level="3" order="24" parent="thread-cancelation">
+      <text><![CDATA[### Cleanup functions
+
+In a lot of cases, exiting a thread mid-execution leaks resources.
+This is problematic, especially if a thread is holding a mutex - as it won't be released.
+
+To solve this issue, POSIX allows creating cleanup handlers that run when the thread has to exit abruptly. (i.e due to being cancelled or calling `pthread_exit`)
+
+Those take form of a function with the following signature:
+```
+void function(void* arg);
+```
+
+You can add this function as a cleanup handle by issuing the `pthread_cleanup_push` call. Let's take a look at the function declaration.
+```
+void pthread_cleanup_push(void (*routine)(void*), void *arg);
+```
+As you can see, the function accepts the aforementioned function along with the argument that will be passed to it.
+
+When a thread exits abruptly, all of the cleanup functions are executed in the reverse order of their addition.
+
+You also can remove cleanup handlers by issuing `pthread_cleanup_pop`.
+```
+void pthread_cleanup_pop(int execute);
+```
+This function removes the handlers in the same order as they would be executed. 
+The `execute` parameter allows for optional execution of the handler.
+
+For every instance of pthread_cleanup_push in a scope there must be an instance of pthread_cleanup_pop.
+
+More information:
+```
+man 3p pthread_cleanup_pop
+```]]></text>
+    </section>
+    <section id="joining-canceled-threads" title="Joining canceled threads" level="3" order="25" parent="thread-cancelation">
+      <text><![CDATA[### Joining canceled threads
+
+Canceled threads remain joinable, since a cancel request isn't guaranteed to be processed.
+
+If a thread gets canceled, the value pointer passed to `pthread_join` will be set to `PTHREAD_CANCELED`
+
+More information:
+```
+man 3p pthread_join
+man 3p pthread_exit (specifically the last paragraph of the RATIONALE section)
+```]]></text>
+    </section>
+    <section id="excercise-4" title="Excercise" level="3" order="26" parent="thread-cancelation">
+      <text><![CDATA[### Excercise
+
+Goal: 
+Program simulates the faith of MiNI students, it takes the following parameter:
+- n <= 100 ... count of new students
+
+The program stores the counters of students studding on year 1,2,3 and the final BSc year.
+
+Main Thread: Initiate students, then for 4 seconds at random intervals (100-300ms) strike off one of the students (cancel thread). After the 4s period waits for the students threads and prints the counters. 
+
+Students threads: Student (thread) adds itself to the counter of the first year, after a second it removes itself from it and adds to the second year counter and so on until it reaches the BSc counter.  The thread must be always prepared for cancellation.
+
+What you need to know:
+
+- man 3p pthread_cancel
+- man 3 pthread_cleanup_push
+- man 3 pthread_cleanup_pop
+- man 7 time
+- man 3p clock_getres
+
+**prog20.c**:
+
+```c
+#include <errno.h>
+#include <pthread.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+
+#define MAXLINE 4096
+#define DEFAULT_STUDENT_COUNT 100
+#define ELAPSED(start, end) ((end).tv_sec - (start).tv_sec) + (((end).tv_nsec - (start).tv_nsec) * 1.0e-9)
+#define ERR(source) (perror(source), fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), exit(EXIT_FAILURE))
+
+typedef unsigned int UINT;
+typedef struct timespec timespec_t;
+typedef struct studentList
+{
+    bool *removed;
+    pthread_t *thStudents;
+    int count;
+    int present;
+} studentsList_t;
+typedef struct yearCounters
+{
+    int values[4];
+    pthread_mutex_t mxCounters[4];
+} yearCounters_t;
+typedef struct argsModify
+{
+    yearCounters_t *pYearCounters;
+    int year;
+} argsModify_t;
+void ReadArguments(int argc, char **argv, int *studentsCount);
+void *student_life(void *);
+void increment_counter(argsModify_t *args);
+void decrement_counter(void *_args);
+void msleep(UINT milisec);
+void kick_student(studentsList_t *studentsList);
+
+int main(int argc, char **argv)
+{
+    int studentsCount;
+    ReadArguments(argc, argv, &studentsCount);
+    yearCounters_t counters = {.values = {0, 0, 0, 0},
+                               .mxCounters = {PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER,
+                                              PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER}};
+    studentsList_t studentsList;
+    studentsList.count = studentsCount;
+    studentsList.present = studentsCount;
+    studentsList.thStudents = (pthread_t *)malloc(sizeof(pthread_t) * studentsCount);
+    studentsList.removed = (bool *)malloc(sizeof(bool) * studentsCount);
+    if (studentsList.thStudents == NULL || studentsList.removed == NULL)
+        ERR("Failed to allocate memory for 'students list'!");
+    for (int i = 0; i < studentsCount; i++)
+        studentsList.removed[i] = false;
+    for (int i = 0; i < studentsCount; i++)
+        if (pthread_create(&studentsList.thStudents[i], NULL, student_life, &counters))
+            ERR("Failed to create student thread!");
+    srand(time(NULL));
+    timespec_t start, current;
+    if (clock_gettime(CLOCK_REALTIME, &start))
+        ERR("Failed to retrieve time!");
+    do
+    {
+        msleep(rand() % 201 + 100);
+        if (clock_gettime(CLOCK_REALTIME, &current))
+            ERR("Failed to retrieve time!");
+        kick_student(&studentsList);
+    } while (ELAPSED(start, current) < 4.0);
+    for (int i = 0; i < studentsCount; i++)
+        if (pthread_join(studentsList.thStudents[i], NULL))
+            ERR("Failed to join with a student thread!");
+    printf(" First year: %d\n", counters.values[0]);
+    printf("Second year: %d\n", counters.values[1]);
+    printf(" Third year: %d\n", counters.values[2]);
+    printf("  Engineers: %d\n", counters.values[3]);
+    free(studentsList.removed);
+    free(studentsList.thStudents);
+    exit(EXIT_SUCCESS);
+}
+
+void ReadArguments(int argc, char **argv, int *studentsCount)
+{
+    *studentsCount = DEFAULT_STUDENT_COUNT;
+    if (argc >= 2)
+    {
+        *studentsCount = atoi(argv[1]);
+        if (*studentsCount <= 0)
+        {
+            printf("Invalid value for 'studentsCount'");
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void *student_life(void *voidArgs)
+{
+    pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+    argsModify_t args;
+    args.pYearCounters = voidArgs;
+    for (args.year = 0; args.year < 3; args.year++)
+    {
+        increment_counter(&args);
+        pthread_cleanup_push(decrement_counter, &args);
+        msleep(1000);
+        pthread_cleanup_pop(1);
+    }
+    increment_counter(&args);
+    return NULL;
+}
+
+void increment_counter(argsModify_t *args)
+{
+    pthread_mutex_lock(&(args->pYearCounters->mxCounters[args->year]));
+    args->pYearCounters->values[args->year] += 1;
+    pthread_mutex_unlock(&(args->pYearCounters->mxCounters[args->year]));
+}
+
+void decrement_counter(void *_args)
+{
+    argsModify_t *args = _args;
+    pthread_mutex_lock(&(args->pYearCounters->mxCounters[args->year]));
+    args->pYearCounters->values[args->year] -= 1;
+    pthread_mutex_unlock(&(args->pYearCounters->mxCounters[args->year]));
+}
+
+void msleep(UINT milisec)
+{
+    time_t sec = (int)(milisec / 1000);
+    milisec = milisec - (sec * 1000);
+    timespec_t req = {0};
+    req.tv_sec = sec;
+    req.tv_nsec = milisec * 1000000L;
+    if (nanosleep(&req, &req))
+        ERR("nanosleep");
+}
+
+void kick_student(studentsList_t *studentsList)
+{
+    int idx;
+    if (0 == studentsList->present)
+        return;
+    do
+    {
+        idx = rand() % studentsList->count;
+    } while (studentsList->removed[idx] == true);
+    pthread_cancel(studentsList->thStudents[idx]);
+    studentsList->removed[idx] = true;
+    studentsList->present--;
+}
+```]]></text>
+      <code ref="src/prog20.c" lang="c"/>
+    </section>
+    <section id="notes-and-questions-4" title="Notes and questions" level="3" order="27" parent="thread-cancelation">
+      <text><![CDATA[### Notes and questions
+Threads receive the pointer to the structure with current year and pointer to years counters, structure argsModify_t
+does not have the same flow as one in task 2 of this tutorial i.e. program is not making too many unnecessary references
+to the same data.
+
+Structure `studentsList_t` is only used im main thread, it is not visible for students' threads.
+
+Cleaver structure yearCounters_t initialization will not work in archaic C standards (c89/c90). It is worth knowing but
+please use all the improvements of newer standards in your code.
+
+Cleanup handlers in working thread are deployed to safely expel the student while its thread is asleep. Without the
+handlers the canceled student will occupy the last counter till the end of the program!
+
+Please keep in mind that pthread_cleanup_push must be paired with pthread_cleanup_pop in the same lexical scope (the
+same braces {}).
+
+
+How many mutexes this program uses and what they protect?
+
+**Answer:** Four exactly, one for each year/counter.
+
+
+Must current year of a student be a part of argsModify_t structure?
+
+**Answer:** No it could have been automatic in thread variable, then structure argsModify_t would be no longer needed and you would pass pointer to  yearCounters instead.
+
+
+What does it mean that the thread cancellation state is set to PTHREAD_CANCEL_DEFERRED ?
+
+**Answer:** Cancellation will only happen during certain function calls (so called cancellation points), it will not disturb the rest of the code in the thread. In other words the thread can finish a part of its work before it is canceled.
+
+
+What functions used in the thread code are cancellation points?
+
+**Answer:** Only nanosleep (called from msleep) is a cancellation point in this code.
+
+
+How do we learn what functions are cancellation points?
+
+**Answer:** $man 7 pthreads
+
+
+What one in this call " pthread_cleanup_pop(1);" means ?
+
+**Answer:** It means that the handler is not only removed from the handlers stack but also executed.
+
+
+When the year counter is decreased?
+
+**Answer:** In two cases, during cancellation (rare case), during the removal of cleanup handler from the stack of handlers.
+
+
+Algorithm selecting a thread for cancellation has an apparent flow, can you name it and tell what threat it creates?
+
+**Answer:** This random selection can last very long if only a few "live" threads are left on a large list of threads. Try to run the program with 10 as the parameter to check it.
+
+
+Improve random selection as an exercise.
+
+Have a look at the method used to measure the 4 seconds life time of the program (clock_gettime, nanosleep). Please change the solution  to use alarm function and the SIGALRM handler as an exercise.
+
+Do the example tasks. During the laboratory you will have more time and a starting code. If you do following tasks in the allotted time, it means that you are well-prepared.
+
+- [Task 1](https://sop.mini.pw.edu.pl/en/sop1/lab/l3/example1/) ~60 minutes
+- [Task 2](https://sop.mini.pw.edu.pl/en/sop1/lab/l3/example2/) ~120 minutes
+- [Task 3](https://sop.mini.pw.edu.pl/en/sop1/lab/l3/example3/) ~100 minutes]]></text>
+    </section>
+    <section id="source-codes-presented-in-this-tutorial" title="Source codes presented in this tutorial" level="2" order="28" parent="tutorial-3-threads-mutexes-and-signals">
+      <text><![CDATA[## Source codes presented in this tutorial
+
+
+- [prog17.c](prog17.c)
+- [prog18.c](prog18.c)
+- [prog19.c](prog19.c)
+- [prog20.c](prog20.c)]]></text>
+    </section>
+  </tutorial>
+  <tasks>
+    <task id="example1" title="Laboratory task 3: threads, mutexes, signals" source_url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/example1/">
+      <statement><![CDATA[## Task
+
+Write a program that takes 2 input parameters: n,k. where n is the number of processing posix threads and k is the task array size. The main thread fills the task array with random floating point number of range \[1,60\]. Main thread creates n processing threads. Each processing thread is calculating the square root of random array cell and stores the result in result array, prints: “sqrt(a) = b” (b is a result, a is an input) and then sleeps for 100ms. The programmer must ensure that each cell is calculated only once and each calculation should be mutex protected. The program ends when all cells are calculated. The main thread is waiting for all threads and then prints input and results arrays.]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[Creating n+1 threads. Each thread is printing “\*”. Main thread is waiting for all threads.]]></stage>
+        <stage n="2"><![CDATA[Main thread is filling the task array and prints it, the processing threads are choosing random array cell number, print its index and exit.]]></stage>
+        <stage n="3"><![CDATA[Processing threads are calculating result of one random cell with mutex synchronization, print the result and exit . Main thread is printing both arrays afterwards (after the join). At this stage cells can be calculated more than once but not in parallel.]]></stage>
+        <stage n="4"><![CDATA[Each cell is protected by separate mutex. Processing threads are counting remaining cells to compute. If that number reaches 0, threads are terminating otherwise they calculate the next random remaining cell and sleep]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+    <task id="example2" title="Laboratory task 3: threads, mutexes, signals" source_url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/example2/">
+      <statement><![CDATA[## Task
+
+Write a program which performs parallel operations on an array of
+integers. Program takes `n` (`8 <= n <= 256`) and `p`
+(`1 <= p <= 16`) as arguments. Then it creates an array of
+subsequent integers from `0` to `n-1`. Parameter `p` is the number of
+working threads running at the same time.
+
+After receiving `SIGUSR1` program generates two random numbers `a` and
+`b` (`0 <= a < b <= n-1`) and spawns a new thread to perform
+inversion on array - swap elements `a` and `b`, `a+1` and `b-1`, `a+2`
+and `b-2` etc. until $a+\lfloor\frac{b-a-1}{2}\rfloor$. After each swap
+thread, wait 5ms. A single swap should be atomic (you should make sure
+that swapped elements are not modified by different threads) - use mutex
+per array element.
+
+After receiving `SIGUSR2`, the program spawns a new thread which prints
+the state of the array. To print the array in a valid, existing state,
+you should lock it whole (otherwise swapping threads can make changes
+during printing).
+
+If a new signal arrives when there are already `p` working threads, the
+program should print message `All thread busy, aborting request` and
+return to waiting. Working threads should be counted and monitored. When
+one of the threads finishes its job, a new request can be processed.
+
+Think about locking order to ensure operations safety and avoid
+deadlocks. You don’t need to (and you shouldn’t) perform redundant
+operations like swapping elements with itself.
+
+You should not put heavy logic in signal handlers - only a few
+assignments or simple arithmetic operations are permitted. Any system
+functions are not permitted.
+
+Stages:]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[Create array and mutexes as per task description. After receiving
+    `SIGUSR1`, swaps are performed by the main thread.]]></stage>
+        <stage n="2"><![CDATA[Implement printing on `SIGUSR2` using new, detached thread.]]></stage>
+        <stage n="3"><![CDATA[Move swapping operation to a separate thread. Implement thread count limit logic.]]></stage>
+        <stage n="4"><![CDATA[After receiving `SIGINT` (ctrl+c) program joins all threads and cleanly terminates.]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+    <task id="example3" title="Laboratory task 3: threads, mutexes, signals" source_url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/example3/">
+      <statement><![CDATA[## Task
+
+You need to write a program simulating a dog race. The program takes two
+natural numbers as arguments: `n>20` - the length of the track, and
+`m>2` - the number of dogs. The main thread of the program creates a
+racetrack for dogs - an array of integers of length `n`. The array is
+initially filled with zeros. The array will store the number of dogs at
+each position on the track. After initializing the array, the program
+creates `m` threads, each thread representing one dog.
+
+The dog’s thread operates as follows: initially, the dog is outside the
+track. At the beginning, the thread places the dog at position 0 and
+increases the array value by 1. The direction of the dog’s movement is
+towards increasing array indices. Then, in a loop, it performs the
+following actions:
+
+1.  Waits for a random time in the range `[200, 1520]` ms.
+2.  Generates a random integer in the range `[1,5]` - the distance it
+    will move.
+3.  Checks if the randomly chosen position is within the array range. If
+    not, it moves as far as possible, then changes the direction of
+    movement.
+4.  Checks if there is another dog at the position it has moved to. In
+    such a situation, it prints the message `waf waf waf` and stays in
+    place.
+5.  Prints its number and new position on stdout, and optional
+    information about reaching the end of the track.
+6.  Updates the array values accordingly (decreases the value at the
+    position it leaves and increases it at the position it arrives at).
+
+After reaching the end of the array, the dog prints the order in which
+it arrived at the finish line and finishes its work.
+
+The main thread prints the state of the array every 1000 ms. When each
+dog finishes the race, the program should print the three fastest dogs
+and terminate. In response to the `SIGINT` signal, the main thread
+cancels all dog threads, waits for their completion, and then the
+program ends, printing information about the interrupted race.
+
+Access to the array should be locked with a separate mutex for each
+element. The counter of dogs that have reached the finish line should
+also be locked with a mutex.
+
+The program must not use any global variables.]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[Read the arguments, initialize the array. Create dog threads. Each
+   thread increases a random array cell by 1, prints its number, and
+   finishes. After all dog threads finish, the main thread prints the final
+   state of the track.]]></stage>
+        <stage n="2"><![CDATA[Implement the logic of the dog thread, initially without locking.]]></stage>
+        <stage n="3"><![CDATA[Implement locking using mutexes.]]></stage>
+        <stage n="4"><![CDATA[Implement program termination using SIGINT.]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+  </tasks>
+  <sources>
+    <file ref="src/prog17.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/prog17.c"/>
+    <file ref="src/prog18.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/prog18.c"/>
+    <file ref="src/prog19.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/prog19.c"/>
+    <file ref="src/prog20.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/prog20.c"/>
+  </sources>
+  <references>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/example1/" title="Task 1"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/example2/" title="Task 2"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop1/lab/l3/example3/" title="Task 3"/>
+  </references>
+  <metadata/>
+</lab>

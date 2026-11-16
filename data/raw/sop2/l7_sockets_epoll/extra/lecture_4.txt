@@ -1,0 +1,947 @@
+--- page 1 ---
+
+IP, TCP and UDP Packets
+Marek Kozłowski
+Faculty of Mathematics and Information Sciences
+Warsaw University of Technology
+Warsaw, 2023/2024
+
+--- page 2 ---
+
+Contents
+1 Internet Protocol
+2 Transmission Control Protocol
+3 User Datagram Protocol
+
+--- page 3 ---
+
+Outline of the lecture
+1 Internet Protocol
+2 Transmission Control Protocol
+3 User Datagram Protocol
+
+--- page 4 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+
+--- page 5 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+Version
+IP version. Must be equal to 4.
+
+--- page 6 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+IHL, Internet Header Length
+IP header length in 32-bit words. Equal to or greater than 5 (see the
+Options field description).
+
+--- page 7 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+ToS/DSCP/ECN (Type of Service, Differential Services Code Point,
+Explicit Congestion Notification)
+Re-defined in many RFCs: ToS (RFC 791), DSCP (RFC 2474), ECN
+(RFC 3168) but always used for quality of service. Modifications are
+summarized in the RFC 3260.
+
+--- page 8 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+Total Length
+Packet length in bytes. The range is: 20–65535, usually the 2nd OSI layer
+requires this field value at most 1500. Every host must be able to receive at
+least 576-byte packets.
+
+--- page 9 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+Identification
+Unique, OS-dependent 16-bit datagram identifier.
+
+--- page 10 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+Fragment Flags
+Flags for packet fragmentation:
+bit 0: reserved (not used), equal to 0,
+bit 1: datagram cannot be fragmented (DF – Don’t Fragment),
+bit 2: more fragments exist (MF – More Fragments).
+
+--- page 11 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+Fragment Offset
+Data offset (against the beginning of the segment) in 64-bit blocks. For the
+first fragment the Fragment Offset value is equal to 0.
+
+--- page 12 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+TTL (Time To Live)
+Time to live in hops (initially – in seconds). Every router decrements the
+value of this field by 1. Packets with the TTL value equal to 0 are
+eliminated; the ICMP Destination Unreachable packet should be sent to
+the original sender. Initial value is OS-dependent.
+
+--- page 13 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+Protocol
+Number for the higher level protocol assigned by the IANA. Selected
+values: ICMP – 1, TCP – 6, UDP – 17.
+
+--- page 14 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+Header Checksum
+Checksum which is a 16-bit one’s complement of the one’s complement sum
+of all 16 bit words in the header with assumption that the Checksum field
+is equal to 0 (RFC 791)
+Remark: Due to the TTL value change the packet checksum must be
+recomputed at every host1.
+1Or the Ignore Checksums option may be set in Options
+
+--- page 15 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+Header Checksum – continued.
+Reminder: In the one’s complement (in Polish: U1) positive numbers are
+represented in the same way as in the binary numeral system but the first
+bit (the sign) must be equal to 0. Respective negatives are obtained as their
+binary negations. For example: 2510 = 000110012, −2510 = 111001102.
+Remark: In one’s complement there are numbers: 0 (000000002) and −0
+(111111112).
+
+--- page 16 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+Source Address, Destination Address
+IP addresses.
+
+--- page 17 ---
+
+IP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Version
+IHL
+ToS/DSCP/ECN
+Total Length
+Identification
+Fragment Flags (3) and Offset (13)
+Time To Live
+Protocol
+Header Checksum
+Source Address
+Destination Address
+Options
+Options
+Option filed is not mandatory. If it exists then the first octet informs about
+the options set. It is a variable length field – due to the IHL representation
+the Option field must be fulfilled with 0’s (so called Padding field) to the
+32-bit word boundary.
+
+--- page 18 ---
+
+Outline of the lecture
+1 Internet Protocol
+2 Transmission Control Protocol
+3 User Datagram Protocol
+
+--- page 19 ---
+
+Transmission Control Protocol
+specified by the RFC 793 (1981)
+transport layer protocol:
+stream oriented
+connection oriented
+reliable
+with flow control
+requires establishing a session before any data transmission
+
+--- page 20 ---
+
+TCP Stream
+unidirectional (two opposite streams per session)
+identified by Initial Sequence Numbers (ISN)
+each TCP packet contains Sequence Number: ISN + data offset
+(in bytes, relative to the beginning of the stream)
+each TCP ACK packet1 contains Acknowledgment Sequence
+Number: next Sequence Number expected in the opposite stream
+1See the next slide.
+
+--- page 21 ---
+
+Session Control Flags
+Four flags in TCP headers are used for session control: SYN,
+FIN, ACK and RST.
+More than one flag can be set at a time.
+The terms SYN packet, FIN packet etc. denote any TCP
+packets with respective flags set.
+Normally, all TCP packets (except the very fist one) are ACK
+packets.
+
+--- page 22 ---
+
+TCP Session
+opened by the three way handshake: SYN(→), SYN-ACK(←)
+and ACK(→)
+SYN packets define ISNs (because of offset equal to 0)
+each packet must be confirmed with an ACK packet (otherwise it
+is retransmitted) before the next one can be sent2
+FIN packet closes a stream (it has to be confirmed with an ACK
+packet)
+both streams don’t have to be closed simultaneously3
+2This can be changed with the SACK – Selective ACK – option set in Options.
+3e.g. FTP data transfer.
+
+--- page 23 ---
+
+TCP States
+RFC 793 defines TCP via a state transition diagram.
+States change after receiving respective flags or flag combinations.
+TCP connection is in one of the following states:
+LISTEN,
+SYN-SENT,
+SYN-RECEIVED,
+ESTABLISHED,
+FIN-WAIT-1 (FIN sent),
+FIN-WAIT-2 (FIN acknowledged),
+CLOSE-WAIT (FIN received and acknowledged),
+CLOSING,
+LAST-ACK (FIN received, FIN sent) ,
+TIME-WAIT,
+CLOSE.
+
+--- page 24 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+
+--- page 25 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Source and Destination Ports
+Port numbers are registered by the IANA. See next slides.
+
+--- page 26 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Sequence Number
+The sum of the data offset in the stream and the initial ISN value.
+
+--- page 27 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+ACK Sequence Number
+If the ACK flag is set it indicates expected next Sequence Number.
+
+--- page 28 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Data Offset
+The TCP header size in 32-bit words.
+
+--- page 29 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Reserved
+Bits must be equal to 0.
+
+--- page 30 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Flags (CWR, ECE, URG, ACK, PSH, RST, SYN, FIN)
+CWR (Congestion Window Reduced) and ECE (Explicit Congestion
+Echo) flags were added by the RFC 31684.
+4A separate presentation will discus their use.
+
+--- page 31 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Flags (CWR, ECE, URG, ACK, PSH, RST, SYN, FIN)
+ACK, RST (connection reset), SYN and FIN flags control TCP sessions.
+
+--- page 32 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Flags (CWR, ECE, URG, ACK, PSH, RST, SYN, FIN)
+URG – the Urgent flag, see Urgent Pointer.
+PSH – the Push flag indicates that the data should not be buffered.
+
+--- page 33 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Window
+The number of data octets beginning with the one indicated in the
+acknowledgment field which the sender of this segment is willing to accept.
+
+--- page 34 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Checksum
+Checksum analogous to IP checksum for the TCP header plus the IP
+pseudo-header:
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Address
+Destination Address
+Zeros
+Protocol
+TCP Length (TCP + Data)
+
+--- page 35 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Urgent Pointer
+If the URG flag is set – offset to the Sequence Number of the last byte of
+urgent data. According to the RFC 793 points to the last byte of urgent
+data, according to the BSD interpretation (used in Linuces) – to the first
+byte after urgent data.
+
+--- page 36 ---
+
+TCP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Sequence Number
+Acknowledgement Number
+Offset
+Reserved
+Flags
+Window
+Checksum
+Urgent Pointer
+Options
+Options
+Optional, variable-length field fulfilled with 0’s to the 32-bit word boundary.
+If present it consists of length specifier, active options indicator and values.
+
+--- page 37 ---
+
+TCP/UDP Ports
+numbers managed by the IANA
+the same assignments for TCP and UDP
+address range is divided into 3 classes:
+well-known ports (0 – 1023) – binding to well-known port
+requires administrative (root) privileges
+registered ports (1024–49151) may be used by user processes, for
+example: browsers, readers, communicators etc
+dynamic ports (49151–65534) often used for dynamic mappings
+by simple NATs or other IP masquerades
+
+--- page 38 ---
+
+Outline of the lecture
+1 Internet Protocol
+2 Transmission Control Protocol
+3 User Datagram Protocol
+
+--- page 39 ---
+
+User Datagram Protocol
+specified by the RFC 768 (1980)
+extremely simplified protocol of the transport layer:
+connectionless
+unreliable
+with no error correction nor ordering
+intended for:
+request-reply protocols that don’t require reliability such as DNS,
+DHCP, RIP or NTP
+protocols that provide their own control mechanisms (for
+example: TFTP)
+protocols used within LANs that require high efficiency (for
+example: games)
+
+--- page 40 ---
+
+UDP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Length
+Checksum
+
+--- page 41 ---
+
+UDP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Length
+Checksum
+Source and Destination Ports
+UDP ports.
+
+--- page 42 ---
+
+UDP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Length
+Checksum
+Length
+UDP header + data size in bytes.
+
+--- page 43 ---
+
+UDP Header
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Port
+Destination Port
+Length
+Checksum
+Checksum
+Checksum analogous to IP checksum for the UDP header plus the IP
+pseudo-header:
+0 - 3
+4 - 7
+8 - 11
+12 - 15
+16 - 19
+20 - 23
+24 - 27
+28 - 31
+Source Address
+Destination Address
+Zeros
+Protocol
+UDP Length (UDP + Data)

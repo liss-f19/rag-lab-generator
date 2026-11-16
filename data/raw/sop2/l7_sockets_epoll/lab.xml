@@ -1,0 +1,967 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<lab id="sop2/l7" course="sop2" number="7" slug="l7_sockets_epoll" lang="en" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/">
+  <title>sockets and epoll</title>
+  <topics>
+    <topic>epoll</topic>
+    <topic>socket</topic>
+    <topic>unix</topic>
+    <topic>tcp</topic>
+    <topic>bind</topic>
+    <topic>listen</topic>
+    <topic>connect</topic>
+    <topic>accept</topic>
+    <topic>epoll_create</topic>
+    <topic>epoll_ctl</topic>
+    <topic>epoll_wait</topic>
+    <topic>freeaddrinfo</topic>
+    <topic>gai_strerror</topic>
+    <topic>bulk_read</topic>
+    <topic>TEMP_FAILURE_RETRY</topic>
+    <topic>epoll_pwait</topic>
+  </topics>
+  <tutorial>
+    <section id="tutorial-7-sockets-and-epoll" title="Tutorial 7 - Sockets and epoll" level="1" order="0" parent="">
+      <text><![CDATA[# Tutorial 7 - Sockets and epoll
+
+
+> In this tutorial we use `epoll` functions family to wait on multiple descriptors. `epoll` is not a part of POSIX, but Linux extension. If you want to write portable code, you should look at `select` or `poll` functions - which are standarized, but have worse performance and are less convenient to use.
+
+
+Introduction notes:
+
+1. It's worth to familiarize yourself with [netcat](https://sop.mini.pw.edu.pl/en/sop2/lab/netcat/) befaore the lab
+1. All materials from OPS1. OPS2 are still obligatory, especially tutorials on threads and processes!
+1. Quick look at this material will not suffice, you should compile and run all the programs, check how they work, read additional materials like man pages. As you read the material please do all the exercises and questions. At the end you will find sample task similar to the one you will do during the labs, please do it at home.
+1. Codes, information and tasks are organized in logical sequence, in order to fully understand it you should follow this sequence. Sometimes former task makes context for the next one and it is harder to comprehend it without the study of previous parts.  
+1. Most of exercises require command line to practice, I usually assume that all the files are placed in the current working folder and that we do not need to add path parts to file names. 
+1. Quite often you will find $ sign placed before commands you should run in the shell, obviously you do not need to rewrite this sight to command line, I put it there to remind you that it is a command to execute.
+1. What you learn and practice in this tutorial will be required for the next ones. If you have a problem with this material after the graded lab you can still ask teachers for help. 
+1. In many cases in the below codes  post-interruption restarting  macro TEMP_FAILURE_RETRY was deployed even though not all the programs handle the signals. It was done due to the fact that most of the presented code will be reused by students in their solutions that may require signal handling and the fact that a lot of presented functions can be reused to build a library for your future codes, thus it should be as portable as possible.
+1. It is essential to consider the architectural differences when planning the protocol that is used in communication over the network. Please always consider the followin
+1. byte order - in what order of bytes the integer number is stored in the memory. When sending the number from one order to another without a proper conversion it changes its value (e.g. 0x00FF to 0xFF00). Fortunately you do not need to know your local byte order, instead you always convert all the integers to so called network byte order with the macros htons (1.  bit shorts) and htonl (32 bit integers) before sending them and again convert it from this order back to host order with the macros ntohs and ntohl just after receiving them.
+1. There is no network byte order (or a format) for floating point numbers. As their format varies on different architectures you must send them as text or as fixed precision numbers (integers).
+1. The one byte character string is not affected by the byte order, in most cases sending the data in textual (human readable) format is a good and safe choice. All one byte data types are byte order safe.
+1. Integer types in C language do not have standardized  size. They can have different size depending on the architecture or even the compiler. To avoid the problems it is safer to use size defined types like int32_t or uint1. _t.
+1. Sending a structure over the network can cause problems too. It is related to the way compilers layout the structure fields in the memory. On some architectures it is faster to read the memory bytes at addresses divisible by 8 on other by 1. ,32 or other divider. Compiler tries to speed up the access by placing all the fields on fast addresses and it means gaps of unknown size between the members. If those gaps differ then after binary transfer the structure will not be usable. To avoid this, you must be able to tell the compiler to "pack" the structure - remove the gaps, but it can not be achieved in a portable way within the code. To avoid the problem you can send the structure member by member.]]></text>
+    </section>
+    <section id="task-on-local-tcp-sockets" title="Task on local + TCP sockets" level="2" order="1" parent="tutorial-7-sockets-and-epoll">
+      <text><![CDATA[## Task on local + TCP sockets
+Write simple integer calculator server. Data send to server consists of:
+- operand 1
+- operand 2
+- result
+- operator (+,-,*,/)
+- status
+
+all converted to 32 bit integers in an array.
+
+Server calculates the results of operation (+,-,*,/) on operands and sends
+the result back to the client. If operation is possible status returned is 1. 
+otherwise it should be 0. Server must work with 2 types of connection:
+- local stream sockets
+- network tcp sockets
+
+Server is single process application, it takes 2 parameters:
+- local socket file name
+- port
+	
+Write 2 types of client, one for each connection type, those clients shall take the following parameters:
+- address of the host (file name for local connection, domain name for inet)
+- port number (tcp client only)
+- operand 1
+- operand 2
+- operator (+,-,*,/)
+
+On success client displays the result on the screen.
+All above programs can be interrupted with C-c, server may NOT leave local socket file not deleted in such a case.
+		]]></text>
+    </section>
+    <section id="solution" title="Solution" level="3" order="2" parent="task-on-local-tcp-sockets">
+      <text><![CDATA[### Solution
+
+What you must know:
+
+```
+man 7 socket
+man 7 epoll
+man 7 unix
+man 7 tcp
+man 3p socket
+man 3p bind
+man 3p listen
+man 3p connect
+man 3p accept
+man 2 epoll_create
+man 2 epoll_ctl
+man 2 epoll_wait
+man 3p freeaddrinfo (obie funkcje, getaddrinfo też)
+man 3p gai_strerror
+```
+
+Pay closer attention at Q&A in `man 7 epoll`. It is well prepared so we will not repeat it here.
+
+
+Common library for all sources in this tutorial:
+
+```c
+#define _GNU_SOURCE
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/epoll.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/un.h>
+#include <unistd.h>
+
+#ifndef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(expression)             \
+    (__extension__({                               \
+        long int __result;                         \
+        do                                         \
+            __result = (long int)(expression);     \
+        while (__result == -1L && errno == EINTR); \
+        __result;                                  \
+    }))
+#endif
+
+#define ERR(source) (perror(source), fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), exit(EXIT_FAILURE))
+
+int sethandler(void (*f)(int), int sigNo)
+{
+    struct sigaction act;
+    memset(&act, 0, sizeof(struct sigaction));
+    act.sa_handler = f;
+    if (-1 == sigaction(sigNo, &act, NULL))
+        return -1;
+    return 0;
+}
+
+int make_local_socket(char *name, struct sockaddr_un *addr)
+{
+    int socketfd;
+    if ((socketfd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0)
+        ERR("socket");
+    memset(addr, 0, sizeof(struct sockaddr_un));
+    addr->sun_family = AF_UNIX;
+    strncpy(addr->sun_path, name, sizeof(addr->sun_path) - 1);
+    return socketfd;
+}
+
+int connect_local_socket(char *name)
+{
+    struct sockaddr_un addr;
+    int socketfd;
+    socketfd = make_local_socket(name, &addr);
+    if (connect(socketfd, (struct sockaddr *)&addr, SUN_LEN(&addr)) < 0)
+    {
+        ERR("connect");
+    }
+    return socketfd;
+}
+
+int bind_local_socket(char *name, int backlog_size)
+{
+    struct sockaddr_un addr;
+    int socketfd;
+    if (unlink(name) < 0 && errno != ENOENT)
+        ERR("unlink");
+    socketfd = make_local_socket(name, &addr);
+    if (bind(socketfd, (struct sockaddr *)&addr, SUN_LEN(&addr)) < 0)
+        ERR("bind");
+    if (listen(socketfd, backlog_size) < 0)
+        ERR("listen");
+    return socketfd;
+}
+
+int make_tcp_socket(void)
+{
+    int sock;
+    sock = socket(PF_INET, SOCK_STREAM, 0);
+    if (sock < 0)
+        ERR("socket");
+    return sock;
+}
+
+struct sockaddr_in make_address(char *address, char *port)
+{
+    int ret;
+    struct sockaddr_in addr;
+    struct addrinfo *result;
+    struct addrinfo hints = {};
+    hints.ai_family = AF_INET;
+    if ((ret = getaddrinfo(address, port, &hints, &result)))
+    {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(ret));
+        exit(EXIT_FAILURE);
+    }
+    addr = *(struct sockaddr_in *)(result->ai_addr);
+    freeaddrinfo(result);
+    return addr;
+}
+
+int connect_tcp_socket(char *name, char *port)
+{
+    struct sockaddr_in addr;
+    int socketfd;
+    socketfd = make_tcp_socket();
+    addr = make_address(name, port);
+    if (connect(socketfd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0)
+    {
+        ERR("connect");
+    }
+    return socketfd;
+}
+
+int bind_tcp_socket(uint16_t port, int backlog_size)
+{
+    struct sockaddr_in addr;
+    int socketfd, t = 1;
+    socketfd = make_tcp_socket();
+    memset(&addr, 0, sizeof(struct sockaddr_in));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(t)))
+        ERR("setsockopt");
+    if (bind(socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        ERR("bind");
+    if (listen(socketfd, backlog_size) < 0)
+        ERR("listen");
+    return socketfd;
+}
+
+int add_new_client(int sfd)
+{
+    int nfd;
+    if ((nfd = TEMP_FAILURE_RETRY(accept(sfd, NULL, NULL))) < 0)
+    {
+        if (EAGAIN == errno || EWOULDBLOCK == errno)
+            return -1;
+        ERR("accept");
+    }
+    return nfd;
+}
+
+ssize_t bulk_read(int fd, char *buf, size_t count)
+{
+    int c;
+    size_t len = 0;
+    do
+    {
+        c = TEMP_FAILURE_RETRY(read(fd, buf, count));
+        if (c < 0)
+            return c;
+        if (0 == c)
+            return len;
+        buf += c;
+        len += c;
+        count -= c;
+    } while (count > 0);
+    return len;
+}
+
+ssize_t bulk_write(int fd, char *buf, size_t count)
+{
+    int c;
+    size_t len = 0;
+    do
+    {
+        c = TEMP_FAILURE_RETRY(write(fd, buf, count));
+        if (c < 0)
+            return c;
+        buf += c;
+        len += c;
+        count -= c;
+    } while (count > 0);
+    return len;
+}
+```
+
+
+server `l7-1_server.c`:
+
+```c
+#include "l7_common.h"
+
+#define BACKLOG 3
+#define MAX_EVENTS 16
+
+volatile sig_atomic_t do_work = 1;
+
+void sigint_handler(int sig) { do_work = 0; }
+
+void usage(char *name) { fprintf(stderr, "USAGE: %s socket port\n", name); }
+
+void calculate(int32_t data[5])
+{
+    int32_t op1, op2, result = -1, status = 1;
+    op1 = ntohl(data[0]);
+    op2 = ntohl(data[1]);
+    switch ((char)ntohl(data[3]))
+    {
+        case '+':
+            result = op1 + op2;
+            break;
+        case '-':
+            result = op1 - op2;
+            break;
+        case '*':
+            result = op1 * op2;
+            break;
+        case '/':
+            if (!op2)
+                status = 0;
+            else
+                result = op1 / op2;
+            break;
+        default:
+            status = 0;
+    }
+    data[4] = htonl(status);
+    data[2] = htonl(result);
+}
+
+void doServer(int local_listen_socket, int tcp_listen_socket)
+{
+    int epoll_descriptor;
+    if ((epoll_descriptor = epoll_create1(0)) < 0)
+    {
+        ERR("epoll_create:");
+    }
+    struct epoll_event event, events[MAX_EVENTS];
+    event.events = EPOLLIN;
+    event.data.fd = local_listen_socket;
+    if (epoll_ctl(epoll_descriptor, EPOLL_CTL_ADD, local_listen_socket, &event) == -1)
+    {
+        perror("epoll_ctl: listen_sock");
+        exit(EXIT_FAILURE);
+    }
+
+    event.data.fd = tcp_listen_socket;
+    if (epoll_ctl(epoll_descriptor, EPOLL_CTL_ADD, tcp_listen_socket, &event) == -1)
+    {
+        perror("epoll_ctl: listen_sock");
+        exit(EXIT_FAILURE);
+    }
+
+    int nfds;
+    int32_t data[5];
+    ssize_t size;
+    sigset_t mask, oldmask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGINT);
+    sigprocmask(SIG_BLOCK, &mask, &oldmask);
+    while (do_work)
+    {
+        if ((nfds = epoll_pwait(epoll_descriptor, events, MAX_EVENTS, -1, &oldmask)) > 0)
+        {
+            for (int n = 0; n < nfds; n++)
+            {
+                int client_socket = add_new_client(events[n].data.fd);
+                if ((size = bulk_read(client_socket, (char *)data, sizeof(int32_t[5]))) < 0)
+                    ERR("read:");
+                if (size == (int)sizeof(int32_t[5]))
+                {
+                    calculate(data);
+                    if (bulk_write(client_socket, (char *)data, sizeof(int32_t[5])) < 0 && errno != EPIPE)
+                        ERR("write:");
+                }
+                if (TEMP_FAILURE_RETRY(close(client_socket)) < 0)
+                    ERR("close");
+            }
+        }
+        else
+        {
+            if (errno == EINTR)
+                continue;
+            ERR("epoll_pwait");
+        }
+    }
+    if (TEMP_FAILURE_RETRY(close(epoll_descriptor)) < 0)
+        ERR("close");
+    sigprocmask(SIG_UNBLOCK, &mask, NULL);
+}
+
+int main(int argc, char **argv)
+{
+    int local_listen_socket, tcp_listen_socket;
+    int new_flags;
+    if (argc != 3)
+    {
+        usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+    if (sethandler(SIG_IGN, SIGPIPE))
+        ERR("Seting SIGPIPE:");
+    if (sethandler(sigint_handler, SIGINT))
+        ERR("Seting SIGINT:");
+    local_listen_socket = bind_local_socket(argv[1], BACKLOG);
+    new_flags = fcntl(local_listen_socket, F_GETFL) | O_NONBLOCK;
+    fcntl(local_listen_socket, F_SETFL, new_flags);
+    tcp_listen_socket = bind_tcp_socket(atoi(argv[2]), BACKLOG);
+    new_flags = fcntl(tcp_listen_socket, F_GETFL) | O_NONBLOCK;
+    fcntl(tcp_listen_socket, F_SETFL, new_flags);
+    doServer(local_listen_socket, tcp_listen_socket);
+    if (TEMP_FAILURE_RETRY(close(local_listen_socket)) < 0)
+        ERR("close");
+    if (unlink(argv[1]) < 0)
+        ERR("unlink");
+    if (TEMP_FAILURE_RETRY(close(tcp_listen_socket)) < 0)
+        ERR("close");
+    fprintf(stderr, "Server has terminated.\n");
+    return EXIT_SUCCESS;
+}
+```
+
+local client `l7-1_client_local.c`:
+
+```c
+#include "l7_common.h"
+
+int make_socket(char *name, struct sockaddr_un *addr)
+{
+    int socketfd;
+    if ((socketfd = socket(PF_UNIX, SOCK_STREAM, 0)) < 0)
+        ERR("socket");
+    memset(addr, 0, sizeof(struct sockaddr_un));
+    addr->sun_family = AF_UNIX;
+    strncpy(addr->sun_path, name, sizeof(addr->sun_path) - 1);
+    return socketfd;
+}
+
+int connect_socket(char *name)
+{
+    struct sockaddr_un addr;
+    int socketfd;
+    socketfd = make_socket(name, &addr);
+    if (connect(socketfd, (struct sockaddr *)&addr, SUN_LEN(&addr)) < 0)
+    {
+        ERR("connect");
+    }
+    return socketfd;
+}
+
+void usage(char *name) { fprintf(stderr, "USAGE: %s socket operand1 operand2 operation \n", name); }
+
+void prepare_request(char **argv, int32_t data[5])
+{
+    data[0] = htonl(atoi(argv[2]));
+    data[1] = htonl(atoi(argv[3]));
+    data[2] = htonl(0);
+    data[3] = htonl((int32_t)(argv[4][0]));
+    data[4] = htonl(1);
+}
+
+void print_answer(int32_t data[5])
+{
+    if (ntohl(data[4]))
+        printf("%d %c %d = %d\n", ntohl(data[0]), (char)ntohl(data[3]), ntohl(data[1]), ntohl(data[2]));
+    else
+        printf("Operation impossible\n");
+}
+
+int main(int argc, char **argv)
+{
+    int fd;
+    int32_t data[5];
+    if (argc != 5)
+    {
+        usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+    fd = connect_socket(argv[1]);
+    prepare_request(argv, data);
+    if (bulk_write(fd, (char *)data, sizeof(int32_t[5])) < 0)
+        ERR("write:");
+    if (bulk_read(fd, (char *)data, sizeof(int32_t[5])) < (int)sizeof(int32_t[5]))
+        ERR("read:");
+    print_answer(data);
+    if (TEMP_FAILURE_RETRY(close(fd)) < 0)
+        ERR("close");
+    return EXIT_SUCCESS;
+}
+```
+
+TCP client `l7-1_client_tcp.c`:
+
+```c
+#include "l7_common.h"
+
+void prepare_request(char **argv, int32_t data[5])
+{
+    data[0] = htonl(atoi(argv[3]));
+    data[1] = htonl(atoi(argv[4]));
+    data[2] = htonl(0);
+    data[3] = htonl((int32_t)(argv[5][0]));
+    data[4] = htonl(1);
+}
+
+void print_answer(int32_t data[5])
+{
+    if (ntohl(data[4]))
+        printf("%d %c %d = %d\n", ntohl(data[0]), (char)ntohl(data[3]), ntohl(data[1]), ntohl(data[2]));
+    else
+        printf("Operation impossible\n");
+}
+
+void usage(char *name) { fprintf(stderr, "USAGE: %s domain port  operand1 operand2 operation \n", name); }
+
+int main(int argc, char **argv)
+{
+    int fd;
+    int32_t data[5];
+    if (argc != 6)
+    {
+        usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+    fd = connect_tcp_socket(argv[1], argv[2]);
+    prepare_request(argv, data);
+    if (bulk_write(fd, (char *)data, sizeof(int32_t[5])) < 0)
+        ERR("write:");
+    if (bulk_read(fd, (char *)data, sizeof(int32_t[5])) < (int)sizeof(int32_t[5]))
+        ERR("read:");
+    print_answer(data);
+    if (TEMP_FAILURE_RETRY(close(fd)) < 0)
+        ERR("close");
+    return EXIT_SUCCESS;
+}
+```
+
+
+To run the code:
+```
+$ ./l7-1_server a 2000&
+$ ./l7-1_client_local a 2 1 +
+$ ./l7-1_client_local a 2 1 '*'
+$ ./l7-1_client_local a 2 0 /
+$ ./l7-1_client_tcp localhost 2000 234 17  /
+
+$ killall -s `SIGINT` prog23a_s
+
+```
+
+In this solution (and also in the next example) all sources uses common library to avoid implementing functions like `bulk_read` many times.
+
+You may be curious why the constant BACKLOG is set for 3, why not 5,7 or 9? In practice  any small number  would fit here, this value is merely a hint for the operating system. This program will not deal with a large amount of network traffic and it handles connections very promptly so the queue of waiting connections will never be long. When you expect a heavier traffic in your program please test larger values and find the smallest one that suits your needs. Unfortunately this value will be different on different operating systems.
+
+In this code macro SUN_LEN is used. Why not to use sizeof instead? Both approaches work correctly. You should know, that the sizeof will return slightly larger size than the macro due to the count method. Unlike sizeof, the macro does not count the gap between the members of the address structure. The implementation expects the smaller value of those two but as the address is just a zero delimited string the larger size value has no effect on the address itself. What should you choose? In this tutorial sizes are calculated with the macro SUN_LEN as the standard demands. In this way we save a few bytes of the memory reserved for the address at the cost of a few CPU cycles more to count the size properly. If you decide that CPU has more priority over memory you can choose to use sizeof it will not be considered as an error.
+
+POSIX standard states that if network connecting gets interrupted it must continue asynchronously to the main code. It is quite logical if you remember that connecting engages two processes usually on different computers. If signal handling function interrupts the connect you can not restart as usual (using `TEMP_FAILURE_RETRY`), it will result in EALREADY error. In our client code we do not handle signals, but how it can be done? You need to check if `connect` was interrupted (`errno==EINTR`) and then use `select`, `poll`, or `epoll*` until socket will be ready to write.
+
+As we always have to  implement asynchronous waiting for connect, it may be reasonable not to waste the time on the connection and plan some code to run in the meantime, we can set the socket into nonblocking and have the connecting done in the background even if connect is not interrupted.
+
+This program implements a trivial network data exchange schema (so called protocol). Client connects and sends the request, server responds and both parties disconnect. Much more complex protocols are possible in your programs of course.
+
+All data exchanged  up to given point of connection time creates what we refer to as a context of the transmission. Depending on the connection protocol context can be more or less complex. In this program the only context that exists is the question sent by the client.  The response is based on the context (the question).
+
+You may ask why macros ntohl and htonl are in use as the connection is local and byte order should not be a concern? First of all, the same code will be reused in the second stage for TCP network connection that demands the conversion. The second reason is that local sockets are not limited to work only on local file systems. In future, it may be possible to create such a socket on a network file system and connect two different machines/architectures. Then the byte order would be an issue that this code can handle.
+
+In this code, function bulk_read is used, it is important to know how this function will work in case of nonblocking descriptor. If data is not available it will return immediately with EAGAIN error. Is this the case in this code? Is the descriptor in not blocking mode? Newly created descriptor returned by accept function does not have to inherit the flags! In case of Linux flags are indeed not inherited so as far as Linux is used not blocking mode of the descriptor does not interfere with be bulk_read. In fact it wold not cause problems also on the platforms that inherit the  not blocking flag due to the fact that we call bulk_read after we learn that the data is already available.
+
+You are obliged to use getaddrinfo function, the older gethostbyname function is described as obsolete in the man page and can not be used in your solutions.
+
+How can you check on the socket file after you started the server?
+
+**Answer:** $ls -l a
+
+
+What is the role of `epoll_pwait` call in this program?
+
+**Answer:** This is the point the program waits for data input from the descriptors and at the same time waits for SIGINT signal delivery
+
+
+Can we replace `epoll_pwait` with `epoll_wait`?
+
+**Answer:** Yes, but it is not worth the effort as then proper SIGINT handling would be much more code demanding
+
+
+Why network listening socket is in non blocking mode? 
+
+**Answer:** With this descriptor in blocking mode it is possible to block the program on "accept" call. Consider the scenario of the client trying to connect and then unexpectedly vanishing from the network. It may happen that `epoll_pwait` will report the socket to be ready for a connection but after the call the new client will disappear and at the time of accept call there will be no one to connect. The program will simply block on the accept until another client arrives. The not blocking mode prevents this situation.
+
+
+Why program uses int32_t (stdint.h) instead of plain int? 
+
+**Answer:** Due to various sizes of the int on different architecture.
+
+
+Why SIGPIPE is ignored in the server?
+
+**Answer:** It is generally easier to handle the broken pipe condition by checking for EPIPE error rather than handling the SIGPIPE signal when the reaction tho the disconnection is not critical - server only closes the current connection and continues to serve other clients.
+
+
+Why bulk_read nad bulk_write are used in the program? SIGINT is terminating the program thus interruption of read and write should not be a problem.
+
+**Answer:** For the same reason TEMP_FAILURE_RETRY is so common in the code - portability of this code to your solution, with bulk_read/write the code is interruption proof.
+
+
+What is the purpose of the unlink in the server code?
+
+**Answer:** It removes the local socket the same way it removes a file or a fifo - clean up function.
+
+
+What is the purpose of socket option SO_REUSEADDR? 
+
+**Answer:** This option allows you to quickly bind to the same port on the server if the program run a moment ago. It is essential for testing when you encounter a bug, quickly correct it and then want to run the program again. Without this option system will block binding to the port for a few minutes.
+
+
+Does the above socket option mean that the packets from previous connection can still be received in a new session?
+
+**Answer:** No, TCP protocol is immune to this kind of distraction, if it was UDP then the answer would be yes.
+
+
+Why the address INADDR_ANY is used for the server, what is the value of this constant?</br>
+
+**Answer:** This is a special address, the value is  0.0.0.0. It means any address. It is used as local address of the server in place of  real IP of the server (server can have more that one IP). It does not mean the program will be caching all the Internet connections! If the connection is directed (routed) to our server then we do not care what IP address client used, if ports match then connection is handled without IP matching. Very popular and convenient solution.
+
+
+TCP client code and local client code are very similar, as a exercise integrate those two types of client into one program with parameter swich (-p local|tcp)]]></text>
+      <code ref="src/l7_common.h" lang="h"/>
+      <code ref="src/l7-1_server.c" lang="c"/>
+      <code ref="src/l7-1_client_local.c" lang="c"/>
+      <code ref="src/l7-1_client_tcp.c" lang="c"/>
+    </section>
+    <section id="sample-task" title="Sample task" level="2" order="3" parent="tutorial-7-sockets-and-epoll">
+      <text><![CDATA[## Sample task
+
+Complete the sample exercises. You will have more time and starter code during the lab session, but completing the tasks below on your own means you are well prepared.
+
+- [Exercise 1](https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example1/) ~60 minutes
+- [Exercise 2](https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example2/) ~120 minutes (stages 4-5 are for L8)
+- [Exercise 3](https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example3/) ~120 minutes
+- [Exercise 4](https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example4/) ~120 minutes]]></text>
+    </section>
+    <section id="source-codes-presented-in-this-tutorial" title="Source codes presented in this tutorial" level="2" order="4" parent="tutorial-7-sockets-and-epoll">
+      <text><![CDATA[## Source codes presented in this tutorial
+
+
+- [l7-1_client_local.c](l7-1_client_local.c)
+- [l7-1_client_tcp.c](l7-1_client_tcp.c)
+- [l7-1_server.c](l7-1_server.c)
+- [l7_common.h](l7_common.h)]]></text>
+    </section>
+    <section id="other-references" title="Other references" level="2" order="5" parent="tutorial-7-sockets-and-epoll">
+      <text><![CDATA[## Other references
+
+ - <http://cs341.cs.illinois.edu/coursebook/Networking#layer-4-tcp-and-client>
+ - <http://cs341.cs.illinois.edu/coursebook/Networking#layer-4-tcp-server>
+ - <http://cs341.cs.illinois.edu/coursebook/Networking#non-blocking-io>]]></text>
+    </section>
+  </tutorial>
+  <tasks>
+    <task id="example1" title="Task on network" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example1/">
+      <statement><![CDATA[## Goal
+
+Write client server TCP application. Client prints its PID on stdout, connects to the server and sends its PID at a text. Server sends back the sum of digits in the PID as int16_t. Client prints the result and exits. Server accepts clients until C-c. On SIGINT it exits and prints the highest sum it calculated. Example:
+
+## Example
+
+```
+./server 2000&
+./client localhost 2000
+PID=1244
+SUM=11
+./client localhost 2000
+PID=1245
+SUM=12
+killall -s SIGINT server
+HIGH SUM=12
+```]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[Server accepts only one connection, reads text data from the client and prints it on the stdout. Client connects and sends text data]]></stage>
+        <stage n="2"><![CDATA[Server accepts many connections, counts the sum of digits and sends the numer (int16_t) back to the client, client prints the result]]></stage>
+        <stage n="3"><![CDATA[Server properly handles C-c, prints maximum sum.]]></stage>
+        <stage n="4"><![CDATA[All types of broken connection on the socket are properly checked and handled.]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+    <task id="example2" title="Task on network" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example2/">
+      <statement><![CDATA[## Imperial Election
+
+It is the year 1519.  
+The Holy Roman Emperor Maximilian I has passed away,  
+and the time has come for the election of a new emperor.  
+
+There are 3 candidates:
+
+1. Francis I, King of France  
+2. Charles V, Archduke of Austria and King of Spain  
+3. Henry VIII, King of England
+
+The election is decided by 7 electors from different Holy Roman Empire member states:
+
+1. Mainz  
+2. Trier  
+3. Cologne  
+4. Bohemia  
+5. Palantinate  
+6. Saxony  
+7. Brandenburg
+
+This year, to facilitate the election process,  
+it has been decided to set up a TCP server handling and counting the votes.  
+Your task is to write this server.  
+Each elector will connect to it,
+cast their vote,
+possibly change their vote,
+and disconnect.  
+You can use `netcat` as a client program.]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[Implement accepting a single connection to the server.  
+   The server accepts one argument: the port number.  
+   
+   Example server execution:
+   
+   ```shell
+   ./sop-hre 8888 
+   ```
+   
+   After starting, the server waits for a single TCP connection.  
+   After establishing a connection,  
+   the server prints `Client connected`, closes the connection, and ends.]]></stage>
+        <stage n="2"><![CDATA[Implement connections from multiple clients.  
+   
+   After a client connects,  
+   send them back a message: `Welcome, elector!`  
+   Then, print each message the client sends to the server on `stdout`.  
+   Use `epoll` to implement this stage (or, alternatively, `ppoll` or `pselect`).  
+   
+   Remember to correctly handle disconnecting clients.]]></stage>
+        <stage n="3"><![CDATA[Implement the voting process and keep a list of connected electors.  
+   
+   When a new client connects, wait for a single digit (in the range [1, 7]).  
+   This digit is the number of the elector connecting to the server.  
+   If a different character is received from the client,
+   close their connection.  
+   
+   While the server is waiting for this identification message,  
+   other clients should still be able to connect.  
+   
+   If another client identifying as elector E tries to connect to the server,  
+   they should be disconnected.  
+   
+   The message sent back to the client should now be sent after identification and should say:  
+   `Welcome, elector of X!`,  
+   where `X` is the member state the elector is from.  
+   
+   After receiving the identification message,  
+   the connected client should be able to cast votes in the election  
+   by sending a number in the range [1, 3], signifying the preferred candidate.  
+   Other characters should be ignored.  
+   Any elector can change their mind and vote multiple times.  
+   Successive votes override previous ones.  
+   
+   Correctly handle clients disconnecting from the server,  
+   including electors disconnecting and reconnecting!]]></stage>
+        <stage n="4"><![CDATA[Implement an additional thread sending out UDP messages.  
+   
+   The program should now accept two arguments in total:]]></stage>
+        <stage n="5"><![CDATA[the TCP server port]]></stage>
+        <stage n="6"><![CDATA[the UDP client port
+   
+   Example server execution:
+   
+   ```shell
+   ./sop-hre 8888 9999 
+   ```
+   
+   All functionality from the previous stages should still work.  
+   
+   Upon starting the server,  
+   create an additional thread with a UDP client that sends a message  
+   with the current election results each second to the given port  
+   on `localhost`.  
+   
+   Remember to protect the election results with a mutex,  
+   or avoid a data race in some other way.]]></stage>
+        <stage n="7"><![CDATA[Handle the `SIGINT` signal.  
+   
+   After receiving it:]]></stage>
+        <stage n="8"><![CDATA[Close all active connections with the electors]]></stage>
+        <stage n="9"><![CDATA[Free all resources, including the UDP thread]]></stage>
+        <stage n="10"><![CDATA[Count and print the votes for each candidate.]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+    <task id="example3" title="Task on network" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example3/">
+      <statement><![CDATA[# Οἱ ἄγγελοι (The messengers)
+
+The year is 480 B.C.  
+The Persian king Xerxes (Old Persian: 𐎧𐏁𐎹𐎠𐎾𐏁𐎠, Khshayārsha) has just invaded the Greek city-states.  
+This unfortunate event has caused many messengers traveling throughout Greece to begin acting as scouts.  
+They visit a variety of cities. Some settlements are controlled by the Greeks, while others have been taken by the Persians.  
+
+To gain an informational advantage, the citizens of Sparta (Doric Greek: Σπάρτα) decide to establish a library connected to the latest telecommunications network for messengers.  
+
+Each messenger receives a TCP client application that can connect to the library server.  
+The library contains a list of city-states and information about whether they are controlled by the Greeks or the Persians.  
+Each messenger maintains a similar list locally, updating it when new information is received from the central library.  
+There are 20 city-states. Each one is identified by a number in the range [1, 20].  
+Your task is to **implement a library server** compatible with the provided client.  
+
+The client program is delivered as a compiled executable. You can run it using:
+
+```shell
+./client <SERVER_ADDRESS> <PORT_NUMBER>
+```
+
+A compiled executable of a sample server implementation is also provided.
+
+## Client and server executables
+
+- [sop2l7e3-4.zip](/files/sop2l8e3-4.zip)]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[Implement handling of a single client connecting to a TCP server.  
+   The server accepts the port number as a command-line argument.  
+   Example server execution:
+
+   ```shell
+   ./server 8888
+   ```
+
+   After starting, the server listens for incoming client connections.  
+   Once connected to the first client, it waits to receive 4 bytes of data, prints them to stdout, closes the connection, and then exits.]]></stage>
+        <stage n="2"><![CDATA[Implement handling of multiple clients and receiving data.]]></stage>
+        <stage n="3"><![CDATA[When a new client connects, they are added to the current list of clients.]]></stage>
+        <stage n="4"><![CDATA[The maximum number of clients is 4.]]></stage>
+        <stage n="5"><![CDATA[If the maximum number of clients is reached, new connections should be rejected.]]></stage>
+        <stage n="6"><![CDATA[Whenever the server receives a 4-byte message from any client, it prints it to the terminal.
+   Use the epoll function to implement this step  
+   (alternatively, you may use pselect or ppoll).
+
+   > ⚠️ **Note: In this step, you do not need to correctly handle client disconnections.**]]></stage>
+        <stage n="7"><![CDATA[Add to the server an array that stores information about which side each city belongs to.]]></stage>
+        <stage n="8"><![CDATA[Initially, all cities belong to the Greeks.]]></stage>
+        <stage n="9"><![CDATA[Each time the server receives a message in the format:
+     ```
+     pXX\n
+     ```
+     or
+     ```
+     gXX\n
+     ```
+     where `XX` is a two-digit number representing a city identifier, it indicates that city `XX` now belongs to the Persians or the Greeks, respectively.]]></stage>
+        <stage n="10"><![CDATA[If a city’s ownership hasn’t changed, take no action.]]></stage>
+        <stage n="11"><![CDATA[If the city’s owner has changed:]]></stage>
+        <stage n="12"><![CDATA[update the city ownership array,]]></stage>
+        <stage n="13"><![CDATA[broadcast the received message to all other connected clients.
+
+   Assumptions:]]></stage>
+        <stage n="14"><![CDATA[You still do not need to handle client disconnections at this stage.]]></stage>
+        <stage n="15"><![CDATA[All incoming messages can be assumed to be in the correct format.]]></stage>
+        <stage n="16"><![CDATA[Upon receiving a `SIGINT` signal, the server should:]]></stage>
+        <stage n="17"><![CDATA[close all connections,]]></stage>
+        <stage n="18"><![CDATA[print out which side each city belongs to,]]></stage>
+        <stage n="19"><![CDATA[free resources and terminate.
+
+   Add proper handling for client disconnections in the following cases:]]></stage>
+        <stage n="20"><![CDATA[Reading from a client descriptor returns a message of length 0.]]></stage>
+        <stage n="21"><![CDATA[Writing to a client descriptor raises an `EPIPE` error.]]></stage>
+        <stage n="22"><![CDATA[The message received from the client is not in the correct format or the city number is outside the [1, 20] range.]]></stage>
+        <stage n="23"><![CDATA[The server receives a Control-C (C-c).
+
+   > ⚠️ **Note: Disconnected clients free up space for new incoming clients.**]]></stage>
+      </stages>
+      <attachments>
+        <file ref="src/sop2l8e3-4.zip"/>
+      </attachments>
+      <notes><![CDATA[]]></notes>
+    </task>
+    <task id="example4" title="Task on network" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example4/">
+      <statement><![CDATA[# Οἱ ἄγγελοι (The messengers)
+
+The year is 480 B.C.  
+The Persian king Xerxes (Old Persian: 𐎧𐏁𐎹𐎠𐎾𐏁𐎠, Khshayārsha) has just invaded the Greek city-states.  
+This unfortunate event has caused many messengers traveling throughout Greece to begin acting as scouts.  
+They visit a variety of cities. Some settlements are controlled by the Greeks, while others have been taken by the Persians.  
+
+To gain an informational advantage, the citizens of Sparta (Doric Greek: Σπάρτα) decide to establish a library connected to the latest telecommunications network for messengers.  
+
+Each messenger receives a TCP client application that can connect to the library server.  
+The library contains a list of city-states and information about whether they are controlled by the Greeks or the Persians.  
+Each messenger maintains a similar list locally, updating it when new information is received from the central library.  
+There are 20 city-states. Each one is identified by a number in the range [1, 20].  
+Your task is to **write a client program** compatible with the library server.  
+
+The server program is provided to you in the form of an executable file. You can start it by:
+
+```shell
+./server <PORT>
+```
+
+An executable file of an example client implementation is also provided.
+
+## Client and server executables
+
+- [sop2l7e3-4.zip](/files/sop2l8e3-4.zip)]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[Implement connecting to the TCP server.]]></stage>
+        <stage n="2"><![CDATA[The client accepts two arguments: server address and port number.]]></stage>
+        <stage n="3"><![CDATA[Example client execution:
+     ```shell
+     ./client 127.0.0.1 8888
+     ```]]></stage>
+        <stage n="4"><![CDATA[After starting:]]></stage>
+        <stage n="5"><![CDATA[Connect to the specified server using the TCP protocol.]]></stage>
+        <stage n="6"><![CDATA[After establishing a connection:]]></stage>
+        <stage n="7"><![CDATA[Send a 4-character message read from `stdin` to the server.]]></stage>
+        <stage n="8"><![CDATA[Close the connection and terminate the program.]]></stage>
+        <stage n="9"><![CDATA[Implement `stdin` command handling and message sending.]]></stage>
+        <stage n="10"><![CDATA[After connecting to the server, wait for commands on `stdin`.]]></stage>
+        <stage n="11"><![CDATA[Support the following commands:]]></stage>
+        <stage n="12"><![CDATA[`e` (exit) – close the connection and terminate the program.]]></stage>
+        <stage n="13"><![CDATA[`m XXX` (message) – send a 4-character message (3 characters + newline) to the server, where `XXX` are any 3 characters.]]></stage>
+        <stage n="14"><![CDATA[`t XX` (travel) – randomly choose one of the two letters {g, p}, and send:
+       ```
+       YXX\n
+       ```
+       to the server, where `Y` is the randomly selected letter, and `XX` is a two-digit number in the range [1, 20].  
+       For single-digit numbers (1–9), use a leading 0.  
+       If the number is outside of the range, print an error and wait for another command.]]></stage>
+        <stage n="15"><![CDATA[`o` (owners) – print the ownership of each city (described below).]]></stage>
+        <stage n="16"><![CDATA[Keep an array that stores which side (Greek or Persian) owns which city.]]></stage>
+        <stage n="17"><![CDATA[Initialize all cities with unknown ownership.]]></stage>
+        <stage n="18"><![CDATA[After sending a message like `gXX\n` via the `t` command, mark city `XX` as belonging to the Greeks.]]></stage>
+        <stage n="19"><![CDATA[Likewise, for messages starting with `pXX\n`, mark the corresponding city as Persian.]]></stage>
+        <stage n="20"><![CDATA[In addition to reading from `stdin`, also handle input from the server socket.]]></stage>
+        <stage n="21"><![CDATA[You can use `epoll` (or `ppoll` or `pselect`) to add both `STDIN_FILENO` and the server socket descriptor to the monitored set.]]></stage>
+        <stage n="22"><![CDATA[The server may send messages to the client in the exact same format as those generated by the `t XX` command.]]></stage>
+        <stage n="23"><![CDATA[When such a message is received from the server, treat it exactly the same way as one generated locally by the `t` command (i.e., update city ownership).]]></stage>
+        <stage n="24"><![CDATA[After receiving a SIGINT signal:]]></stage>
+        <stage n="25"><![CDATA[Print the current owner of each city.]]></stage>
+        <stage n="26"><![CDATA[Close any active connections.]]></stage>
+        <stage n="27"><![CDATA[Free all resources.]]></stage>
+        <stage n="28"><![CDATA[Exit the program.]]></stage>
+      </stages>
+      <attachments>
+        <file ref="src/sop2l8e3-4.zip"/>
+      </attachments>
+      <notes><![CDATA[]]></notes>
+    </task>
+  </tasks>
+  <sources>
+    <file ref="src/l7-1_client_local.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/l7-1_client_local.c"/>
+    <file ref="src/l7-1_client_tcp.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/l7-1_client_tcp.c"/>
+    <file ref="src/l7-1_server.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/l7-1_server.c"/>
+    <file ref="src/l7_common.h" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/l7_common.h"/>
+    <file ref="src/sop2l8e3-4.zip" lang="zip" source_url="https://sop.mini.pw.edu.pl/files/sop2l8e3-4.zip"/>
+  </sources>
+  <references>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/netcat/" title="netcat"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example1/" title="Exercise 1"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example2/" title="Exercise 2"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example3/" title="Exercise 3"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l7/example4/" title="Exercise 4"/>
+  </references>
+  <metadata/>
+</lab>

@@ -1,0 +1,2 @@
+config,rag,searcher,chunker,embedder,hops,k,filter_course,recall_at_k,mrr,ndcg_at_k,latency_ms_p50,n_queries,hit_at_k,section_recall_at_k,coverage,latency_ms_mean,latency_ms_p50_warm,latency_ms_first,context_chars_mean,distinct_documents_mean,n_section_queries,kind_distribution,support_distribution
+vector/dense/hierarchical/bge_m3,vector,dense,hierarchical,bge_m3,,8,False,0.9426,0.7883,0.6111,73.8374,61,0.9508,0.686,0.8607,218.1296,73.8374,8851.1795,7607.6066,3.8689,43,code=0.01;info=0.00;lecture=0.38;summary=0.13;task=0.15;tutorial=0.32,background=0.03;primary=0.97

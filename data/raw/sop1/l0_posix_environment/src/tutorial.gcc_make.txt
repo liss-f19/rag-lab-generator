@@ -1,0 +1,584 @@
+Building your projects using gcc and make
+
+								Jerzy Bartuszek
+						  <jurek (at) gentoo (dot) org>
+-------------------------------------------------------------------------------
+
+Table of contents:
+
+1. Introduction
+2. Building a simple program
+3. GCC parameters explained
+4. More source files
+5. Automatization. Introducing 'make'.
+6. Variables
+7. Multiple targets
+8. Epilogue
+
+-------------------------------------------------------------------------------
+
+1. Introduction
+
+In this tutorial I'll try to explain basic functionality provided by GCC and
+make. You'll learn how to build your projects using GNU C compiler and write
+useful sets of rules for automatization of this process.
+
+First of all you have to check if your have both tools installed in your system.
+Execute 'gcc -v', then 'make -v'. If output is similar to the one presented
+below:
+
+koxta@hell ~ $ gcc -v
+...
+gcc version 4.1.1 (Gentoo 4.1.1-r3)
+
+koxta@hell ~ $ make -v
+GNU Make 3.81
+...
+
+then everything is alright and you are ready to begin. If any of these two
+commands returns such an error:
+
+bash: gcc: command not found
+bash: make: command not found
+
+it means one (or both) of your tools are missing.
+
+2. Building a simple program
+
+A short reminder: Turning a source file into a binary requires two main steps:
+compiling and linking. During compilation phase the source code is being
+translated
+into object code giving object files as a result. Linking is a
+process of taking all the necessary bricks - objects - and putting them into
+one executable file. This is also the place where any external libraries are
+being assembled into your binary as well as linker errors occur, such as 
+unresolved symbols and duplicate variable declarations.
+
+Now let's assume we have a single source file named 'main.c':
+
+---------------- main.c ----------------
+#include <stdio.h>
+#include <stdlib.h>
+
+/* main should ALWAYS return int */
+int main(void)
+{
+   printf("Hello world\n");
+
+   /* Read about EXIT_SUCCESS, EXIT_FAILURE constants	* 
+    * defined in stdlib.h 				*/
+   return EXIT_SUCCESS;
+}
+----------------------------------------
+
+we will use GCC to build our simple program:
+
+koxta@hell ~ $ gcc main.c
+
+this resulted in creating a binary file named a.out:
+
+koxta@hell ~ $ ./a.out
+Hello world!
+
+If you want to specify a name for the output file (and you do), pass an
+additional '-o file' parameter as follows:
+
+koxta@hell ~ $ gcc -o main main.c
+koxta@hell ~ $ ./main
+Hello world!
+
+It makes no difference whether you prepend or append '-o main' to the command
+above.
+
+Just a sec ago you were told that there are two steps - compilation and
+linking - in contrary to only one step that we've taken above. The truth is that
+if
+you have only one source file, gcc is able to perform compilation on-the-fly to
+create
+your assembly. Because your programs are (and if they aren't, they SHOULD be)
+surely 
+more complicated than that, from now on we'll discuss the two steps separately.
+
+So, first we want to compile the source file and after that, explicitly,
+perform linking. We can tell gcc to omit the link stage by passing '-c':
+
+koxta@hell ~ $ gcc -c -o main.o main.c
+
+as a result you should get an object file named 'main.o'. After that execute:
+
+koxta@hell ~ $ gcc -o main main.o
+
+to have the binary file created.
+
+3. GCC parameters explained
+
+There are many useful parameters that you can pass to gcc during compilation and
+linking phase. In this tutorial I'll cover only basic and most useful (from
+your point of view) set of parameters - the ones that you should know about.
+If you need more info, refer to GCC man pages: 'man gcc'. 
+
+Compiler options:
+
+  o -Wall -> Turns on all optional warnings. It will highly increase the
+    quality of your code and reduce the amount of errors you can make.
+    NOTE: This is the only extra parameter you are OBLIGED to add when solving
+    PRiR/PDP tasks.
+  o -pedantic -> Issues all the mandatory diagnostics listed in the C standard.
+    Usage of this parameter is highly recommended.
+  o -Werror -> Makes all warnings into errors. Easy as can be.
+  o -g -> Produces debugging information. Useful if you plan tu run debugger
+    against your binary.
+  o -ansi -> Specifies the standard to which the code should conform. -ansi is
+    equivalent to -std=c89. If you write code in pure ANSI C, you are encouraged
+    to add this flag. However, in most cases it will cause your PRiR/PDP 
+    solutions to produce compilation errors since they refer to POSIX system
+    calls.
+  o -OX -> Turns on compilation optimization, where X denotes level of
+    optimization. -O0 (default) means: do not optimize, while -O3 is the
+    highest level of optimization. The most widely used are -O2 or -Os
+    (optimize for size). Note that mixing -Ox with -g might produce quite funny
+    results during debugging process (vanishing variables, etc.).
+
+Linker options:
+
+  o -lLIBRARY -> This is the most important flag for you to be used when
+    linking. If you are referring to external libraries, this flag tells
+    linker to search for a particular library. Example: you are using sqrt()
+    function that computes a square root of a given value. However, you find
+out 
+    that math library is not being linked by default on your system - you get 
+    linker error. Therefore you need to pass an extra -lm (refers to libm.la) 
+    parameter so that all math related functions are accessible by your code. 
+    NOTE: In this case it's significant where do you place a reference flag
+    inside the linking command. For you it's safe to append it. To know more,
+    refer to gcc man pages.
+ 
+  o -static -> Prevents linking with the shared libraries. All required
+    external references are built into the binary. On one side you can be sure
+    that such executable will need no dependencies during run-time. On the
+    other side size of the output file will be drastically increased. In case
+    of our simple 'Hello world' program:
+
+    Dynamic linking: 5964 bytes
+    Static linking: 525043 bytes
+
+So if we wanted to produce an optimized, relatively bug-free and statically
+linked binary, we would do as follows:
+
+koxta@hell ~ $ gcc -Os -Wall -ansi -Werror -pedantic -c main.c -o main.o
+koxta@hell ~ $ gcc -o main main.o -static
+koxta@hell ~ $ ./main
+Hello world!
+
+4. More source files
+
+Since you are about to work on programs that consist of more than one simple
+source file, you should know how to use your tools to build a binary in
+this kind of situation.
+
+Suppose we have two source files and one header file:
+
+--------------- hello.c ----------------
+#include <stdio.h>
+
+#include "hello.h"
+
+void hello(void)
+{
+   printf("Hello World!\n");
+}
+----------------------------------------
+
+--------------- hello.h ----------------
+#ifndef _HELLO_H
+#define _HELLO_H
+
+void hello(void);
+
+#endif
+----------------------------------------
+
+---------------- main.c ----------------
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "hello.h"
+
+int main(void)
+{
+   hello();
+
+   return EXIT_SUCCESS;
+}
+----------------------------------------
+
+If we want to get a single binary file from that, we should compile our source
+files to get object files first:
+
+koxta@hell ~ $ gcc -c hello.c -o hello.o
+koxta@hell ~ $ gcc -c main.c -o main.o
+
+after this step you should be able to see two .o files inside your working
+directory:
+
+koxta@hell ~ $ ls *.o
+hello.o  main.o
+
+Now let's use linker do to its job:
+
+koxta@hell ~ $ gcc -o main hello.o main.o
+
+or simply:
+
+koxta@hell ~ $ gcc -o main *.o
+
+in case you want globing to list all the .o files for you (but be careful,
+first you should ensure that there are no other .o files in the directory).
+
+5. Automatization. Introducing 'make'.
+
+Now you know that every time you want to build your program, you have to
+execute the same commands over and over. Here is where a tool called 'make'
+comes in handy. Manual pages say: "The purpose of the make utility is to
+determine
+automatically which pieces of a large program need to be recompiled, and issue
+the commands to recompile them.". This means that you will no longer have to
+go through this process manually.
+
+First step to start using make will be writing a makefile. It contains a set
+of rules that describe relationships among files in your program and provides
+commands for updating each file. The default name for a makefile is
+'Makefile'. Although you can change the name (and then execute make with -f
+<filename> parameter) there is no need to do this. So here is a sample
+makefile, that suits the needs of out program:
+
+--------------- Makefile ---------------
+main: main.o hello.o
+	gcc -o main main.o hello.o
+
+main.o: main.c hello.h
+	gcc -o main.o -c main.c
+
+hello.o: hello.c hello.h
+	gcc -o hello.o -c hello.c
+---------------------------------------
+
+NOTE: You HAVE to add a tab character at the beginning of every command line!
+
+As you can see our makefile consists of three rules. Each rule is in a
+following shape:
+
+<target>: <prerequisites>
+	<command>
+	<command>
+	...
+
+Usually target is a name of a file generated by a program. Prerequisites are
+files used as input to create the target. If one of provided prerequisites is
+missing, make fails. Commands are actions that make carries out. Usually a
+command is in a rule with prerequisites and serves to create a target file if
+any of the prerequisites change. However, the rule that specifies commands for
+the target need not have prerequisites. A rule, then, explains how and when to 
+remake certain files which are the targets of the particular rule. make 
+carries out the commands on the prerequisites to create or update the target. 
+A rule can also explain how and when to carry out an action.
+
+By default, make starts with the first target - default goal. In this case it
+starts with 'main'. To produce 'main' we need main.o and hello.o, therefore
+we're looking for rules that provide them. To get main.o, we need main.c,
+hello.c (which are present) and then we have to issue 'gcc -o main.o -c 
+main.c'. To get hello.o - likewise. When both targets are build, the
+prerequisites for building 'main' are met and the 'gcc -o main main.o hello.o'
+command is being executed:
+
+koxta@hell ~ $ make
+gcc -o main.o -c main.c
+gcc -o hello.o -c hello.c
+gcc -o main main.o hello.o
+
+koxta@hell ~ $ ./main
+Hello World!
+
+Sometimes we need to create an action that does not build or produce anything.
+Cleaning a project is a good example. Let's add a new rule to our makefile:
+
+--------------- Makefile ---------------
+main: main.o hello.o
+	gcc -o main main.o hello.o
+
+main.o: main.c hello.h
+	gcc -o main.o -c main.c
+
+hello.o: hello.c hello.h
+	gcc -o hello.o -c hello.c
+
+clean:
+	rm -f main.o hello.o main
+---------------------------------------
+
+Since 'clean' is not a prerequisite of any of the goals, it will be processed
+only if you tell make to do so. You can tell make to build a target by issuing
+'make <target>' and in this particular case:
+
+koxta@hell ~ $ make clean
+rm -f main.o hello.o main
+
+However, there is a trap waiting for you. If a file named 'clean' already
+exists, nothing is going to be done:
+
+koxta@hell ~ $ touch clean
+koxta@hell ~ $ make clean
+make: `clean' is up to date.
+
+To avoid such behaviour you should declare 'clean' as a phony target. It tells
+make that this action should be taken unconditionally upon an explicit request.
+Here is how a phony target declaration looks like:
+
+--------------- Makefile ---------------
+main: main.o hello.o
+	gcc -o main main.o hello.o
+
+main.o: main.c hello.h
+	gcc -o main.o -c main.c
+
+hello.o: hello.c hello.h
+	gcc -o hello.o -c hello.c
+
+.PHONY: clean
+
+clean:
+	rm -f main.o hello.o main
+---------------------------------------
+
+From now on every time you go with 'make clean' a proper command will be
+issued. However, there is still one thing to be mentioned regarding the
+example above. After each shell command returns, make looks at its exit
+status. If the command completed successfully, the next command line is
+executed. After the last command line is finished, the rule is finished. 
+If there is an error (the exit status is nonzero), make gives up on the 
+current rule, and perhaps on all rules. We obviously DO NOT want make to stop
+processing after 'rm' returns an error (eg. because it did not find any file
+to remove). To ignore errors in a command line, write a `-' at the beginning 
+of the line's text (after the initial tab). The `-' is discarded before the 
+command is passed to the shell for execution:
+
+--------------- Makefile ---------------
+main: main.o hello.o
+	gcc -o main main.o hello.o
+
+main.o: main.c hello.h
+	gcc -o main.o -c main.c
+
+hello.o: hello.c hello.h
+	gcc -o hello.o -c hello.c
+
+.PHONY: clean
+
+clean:
+	-rm -f main.o hello.o main
+---------------------------------------
+
+This makefile looks fine and is safe for you to use in simple cases.
+
+6. Variables
+
+In the example above we had to duplicate the list of object files in the rule
+'main'. First of all - this is error-prone. You might forget to add a new
+object to one of your lists. Second - it's tiring. You have to maintain both
+lists manually. Instead, we could store the list of object files in one
+variable and then refer to the variable when needed:
+
+--------------- Makefile ---------------
+FILES=main.o hello.o
+
+main: ${FILES}
+	gcc -o main ${FILES}
+
+main.o: main.c hello.h
+	gcc -o main.o -c main.c
+
+hello.o: hello.c hello.h
+	gcc -o hello.o -c hello.c
+
+.PHONY: clean
+
+clean:
+	-rm -f ${FILES} main
+---------------------------------------
+
+Now every time you want to add a new object file to the list you only
+have to append it to the FILES variable. Note that you refer to a variable by
+${var_name} (a dollar sign followed by a variable's name in curly brackets).
+There are also other things that you should consider storing in variables.
+Examine the example below:
+
+--------------- Makefile ---------------
+CC=gcc
+C_FLAGS=-Wall -Werror -pedantic -g
+L_FLAGS=-lm -lrt
+TARGET=main
+FILES=main.o hello.o
+
+${TARGET}: ${FILES}
+	${CC} -o ${TARGET} ${FILES} ${L_FLAGS}
+
+main.o: main.c hello.h
+	${CC} -o main.o -c main.c ${C_FLAGS}
+
+hello.o: hello.c hello.h
+	${CC} -o hello.o -c hello.c ${C_FLAGS}
+
+.PHONY: clean
+
+clean:
+	-rm -f ${FILES} ${TARGET}
+---------------------------------------
+
+This file is very easy to maintain and very resilient to errors. The only
+place where you will ever need to make changes (besides adding new rules) are
+the variables.
+
+7. Multiple targets
+
+Occasionally you will have to deal with creating more than one executable
+within one project (eg. client and server binary). In this case some
+modifications to the makefile should be introduced. A good solution is to add
+an additional target named 'all' (a common used name for such purpose), which 
+would have 'client' and 'server' binary as its prerequisites:
+
+--------------- Makefile ---------------
+CC=gcc
+C_FLAGS=-Wall -Werror -pedantic -g
+L_FLAGS=-lm -lrt
+
+CLIENT=client
+CLIENT_FILES=client.o
+
+SERVER=server
+SERVER_FILES=server.o
+
+.PHONY: all clean
+
+all: ${CLIENT} ${SERVER}
+
+${CLIENT}: ${CLIENT_FILES}
+        ${CC} -o ${CLIENT} ${CLIENT_FILES} ${L_FLAGS}
+
+client.o:
+	${CC} -c client.c -o client.o ${C_FLAGS}
+
+${SERVER}: ${SERVER_FILES}
+	${CC} -o ${SERVER} ${SERVER_FILES} ${L_FLAGS}
+
+server.o:
+	${CC} -c server.c -o server.o ${C_FLAGS}
+
+clean:
+	-rm -f ${CLIENT} ${CLIENT_FILES} \
+		${SERVER} ${SERVER_FILES}
+---------------------------------------
+
+Note that you can split long lines into shorter lines using backslash-newline.
+You can build both binaries running 'make' or 'make all' or just one of them
+by typing 'make client' or 'make server'.
+
+You might also want to place your project files in multiple directories.
+Here's an example of full project directory listing:
+
+project/
+project/src/
+project/src/client/
+project/src/client/client.c
+project/src/client/Makefile
+project/src/server/
+project/src/server/server.c
+project/src/server/Makefile
+project/bin/
+
+In this scenario we would like to build both binaries 'client' and 'server'
+and place them into the project/bin directory by issuing only one 'make'
+command.
+
+Let's assume that project/ is our working directory. The two makefiles listed 
+above have pretty simple structure:
+
+--------- src/client/Makefile ---------
+CC=gcc
+FLAGS=-Wall -Werror -pedantic -g
+TARGET=client
+FILES=client.c
+
+.PHONY: all clean
+
+all: ${TARGET}
+
+${TARGET}: ${FILES}
+        ${CC} -o ${TARGET} ${FILES}
+
+client.o: client.c
+	${CC} client.c -c -o client.o ${FLAGS}
+
+clean:
+	-rm -rf ${FILES} ${TARGET}
+---------------------------------------
+
+--------- src/server/Makefile ---------
+CC=gcc
+FLAGS=-Wall -Werror -pedantic -g
+TARGET=server
+FILES=server.c
+
+.PHONY: all clean
+
+all: ${TARGET}
+
+${TARGET}: ${FILES}
+	${CC} -o ${TARGET} ${FILES}
+
+server.o: server.c
+	${CC} main.c -c -o main.o ${FLAGS}
+
+clean:
+	-rm -rf ${FILES} ${TARGET}
+---------------------------------------
+
+The question is how to point 'make' to the makefiles residing inside the
+src/server and src/client. The answer is simple: use -C flag. It tells 'make'
+to change to given directory before reading the makefiles or doing anything
+else. Very useful for recursive invocation of 'make'. So let's create a new
+makefile and place it in our working directory project/ :
+
+--------------- Makefile ---------------
+BINDIR=bin
+SRCDIR=src
+
+.PHONY: all clean
+
+all: client server
+	cp ${SRCDIR}/client/client ${BINDIR}/
+	cp ${SRCDIR}/server/server ${BINDIR}/
+
+client:
+	make -C ${SRCDIR}/client
+
+server:
+	make -C ${SRCDIR}/server
+
+clean:
+	make clean -C ${SRCDIR}/client
+	make clean -C ${SRCDIR}/server
+	-rm ${BINDIR}/client ${BINDIR}/server
+---------------------------------------
+
+As you can see, the 'all' target has 'client' and 'server' as its
+prerequisites. According to the above rules, 'make' will first process the
+makefiles found in src/client and src/server and then copy the generated
+binaries into bin/. The 'clean' target works likewise - first it examines 
+the 'clean' target found in makefiles in src/client and src/server, processes 
+them and then removes the binaries from the bin/ directory.
+
+8. Epilogue
+
+This concludes the tutorial. As it was mentioned before I only covered a basic
+part of material here. If you want to know more, please refer to the gcc and
+make manual pages.

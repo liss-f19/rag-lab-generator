@@ -1,0 +1,77 @@
+{
+  "lab_id": "sop1/l2",
+  "course": "sop1",
+  "slug": "l2_processes_signals",
+  "generated_at": "2026-09-22T09:14:50.648648",
+  "sources": [
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l2/prog13a.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l2_processes_signals/src/prog13a.c",
+      "sha256": "5682dd9e71885a50b8d433b0a6951691c3a7b1dbb1b6b6877491ca3d7dbdfaea",
+      "fetched_at": "2026-09-22T09:14:50.638597"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l2/prog13b.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l2_processes_signals/src/prog13b.c",
+      "sha256": "4fdca18fce82fbd0d8a6925cb1a9d913bf7059312d4606c1e6fd02cfcbf507d0",
+      "fetched_at": "2026-09-22T09:14:50.638701"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l2/prog14.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l2_processes_signals/src/prog14.c",
+      "sha256": "388f47c9829cdc7a3bfdf2d3c2c1a168d584fcedebe931f11475c387f7ab1a33",
+      "fetched_at": "2026-09-22T09:14:50.638803"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l2/prog15.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l2_processes_signals/src/prog15.c",
+      "sha256": "bf74251566a1bf9e88b4e560976d5009a6bf716ed9555c48664ad9d33411a8b8",
+      "fetched_at": "2026-09-22T09:14:50.638898"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l2/prog16a.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l2_processes_signals/src/prog16a.c",
+      "sha256": "8de4e85610f16a8c47964269599b5a79afe064e8f8657405cbb93c106d005c23",
+      "fetched_at": "2026-09-22T09:14:50.638990"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l2/prog16b.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l2_processes_signals/src/prog16b.c",
+      "sha256": "74786858f1ba0da99ba77490a47b5b151e685ad78efc5b75e6490336710b8241",
+      "fetched_at": "2026-09-22T09:14:50.639082"
+    }
+  ],
+  "slides": [
+    "sop1_events__OPS1_EventIO.pdf",
+    "sop1_events__OPS1_EventIO.txt",
+    "sop1_events__index.md",
+    "sop1_w4__OPS1_Processes.pdf",
+    "sop1_w4__OPS1_Processes.txt",
+    "sop1_w4__POSIX-processes_5.pdf",
+    "sop1_w4__POSIX-processes_5.txt",
+    "sop1_w4__Processes_0.pdf",
+    "sop1_w4__Processes_0.txt",
+    "sop1_w4__index.md",
+    "sop1_w5__POSIX_signals_6.pdf",
+    "sop1_w5__POSIX_signals_6.txt",
+    "sop1_w5__index.md"
+  ],
+  "extra": [
+    "07-lab-processes.pdf",
+    "07-lab-processes.txt",
+    "07-processes.pdf",
+    "07-processes.txt",
+    "08-lab-system.pdf",
+    "08-lab-system.txt",
+    "08-system.pdf",
+    "08-system.txt"
+  ],
+  "src": [
+    "prog13a.c",
+    "prog13b.c",
+    "prog14.c",
+    "prog15.c",
+    "prog16a.c",
+    "prog16b.c"
+  ]
+}

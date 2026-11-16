@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Schema of data/raw/<course>/<lab_slug>/lab.xml, the canonical form of one laboratory page.
+  Written by ingestion/lab_xml.py and validated on every write and read.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+  <xs:element name="lab">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="title" type="xs:string"/>
+        <xs:element name="topics" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="topic" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="tutorial" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="section" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="text" type="xs:string"/>
+                    <xs:element name="code" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:attribute name="ref" type="xs:string" use="required"/>
+                        <xs:attribute name="lang" type="xs:string"/>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="id" type="xs:string" use="required"/>
+                  <xs:attribute name="title" type="xs:string" use="required"/>
+                  <xs:attribute name="level" type="xs:int" use="required"/>
+                  <xs:attribute name="order" type="xs:int" use="required"/>
+                  <xs:attribute name="parent" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="tasks" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="task" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="statement" type="xs:string"/>
+                    <xs:element name="stages" minOccurs="0">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="stage" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                              <xs:simpleContent>
+                                <xs:extension base="xs:string">
+                                  <xs:attribute name="n" type="xs:int" use="required"/>
+                                </xs:extension>
+                              </xs:simpleContent>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="solution" minOccurs="0" maxOccurs="unbounded">
+                      <xs:complexType>
+                        <xs:attribute name="ref" type="xs:string" use="required"/>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="attachments" minOccurs="0">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="file" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                              <xs:attribute name="ref" type="xs:string" use="required"/>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="notes" type="xs:string" minOccurs="0"/>
+                  </xs:sequence>
+                  <xs:attribute name="id" type="xs:string" use="required"/>
+                  <xs:attribute name="title" type="xs:string" use="required"/>
+                  <xs:attribute name="source_url" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="sources" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="file" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="ref" type="xs:string" use="required"/>
+                  <xs:attribute name="lang" type="xs:string"/>
+                  <xs:attribute name="source_url" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="references" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ref" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:attribute name="url" type="xs:string" use="required"/>
+                  <xs:attribute name="title" type="xs:string"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="metadata" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="item" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="xs:string">
+                      <xs:attribute name="key" type="xs:string" use="required"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="id" type="xs:string" use="required"/>
+      <xs:attribute name="course" type="xs:string" use="required"/>
+      <xs:attribute name="number" type="xs:string" use="required"/>
+      <xs:attribute name="slug" type="xs:string" use="required"/>
+      <xs:attribute name="lang" type="xs:string" use="required"/>
+      <xs:attribute name="source_url" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

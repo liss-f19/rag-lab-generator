@@ -1,0 +1,1101 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<lab id="sop2/l5" course="sop2" number="5" slug="l5_fifo_pipe" lang="en" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/">
+  <title>FIFO/pipe</title>
+  <topics>
+    <topic>fifo</topic>
+    <topic>pipe</topic>
+    <topic>mkfifo</topic>
+    <topic>isalpha</topic>
+    <topic>exit</topic>
+    <topic>child_work</topic>
+    <topic>TEMP_FAILURE_RETRY</topic>
+    <topic>perror</topic>
+    <topic>fprintf</topic>
+    <topic>usage</topic>
+    <topic>read_from_fifo</topic>
+    <topic>read</topic>
+    <topic>isalnum</topic>
+    <topic>printf</topic>
+    <topic>open</topic>
+    <topic>close</topic>
+    <topic>write_to_fifo</topic>
+    <topic>getpid</topic>
+    <topic>memset</topic>
+    <topic>write</topic>
+    <topic>unlink</topic>
+    <topic>kill</topic>
+    <topic>sethandler</topic>
+    <topic>sigaction</topic>
+    <topic>sigchld_handler</topic>
+    <topic>waitpid</topic>
+    <topic>srand</topic>
+    <topic>rand</topic>
+    <topic>parent_work</topic>
+    <topic>create_children_and_pipes</topic>
+    <topic>fork</topic>
+    <topic>free</topic>
+    <topic>atoi</topic>
+    <topic>malloc</topic>
+    <topic>sig_handler</topic>
+    <topic>sig_killme</topic>
+  </topics>
+  <tutorial>
+    <section id="tutorial-5-fifo-pipe" title="Tutorial 5 - FIFO/pipe" level="1" order="0" parent="">
+      <text><![CDATA[# Tutorial 5 - FIFO/pipe
+
+
+> Introduction notes:
+> - All materials from OPS1 are still obligatory!
+> - Quick look at this material will not suffice, you should compile and run all the programs, check how they work, read additional materials like man pages. As you read the material please do all the exercises and questions. At the end you will find sample task similar to the one you will do during the labs, please do it at home.
+> - Codes, information and tasks are organized in logical sequence, in order to fully understand it you should follow this sequence. Sometimes former task makes context for the next one and it is harder to comprehend it without the study of previous parts.  
+> - Most of the exercises require command line to practice, I usually assume that all the files are placed in the current working folder and that we do not need to add path parts to file names. 
+> - Quite often you will find $ sign placed before commands you should run in the shell, obviously you do not need to rewrite this sight to command line, I put it there to remind you that it is a command to execute.
+> - What you learn and practice in this tutorial will be required for the next ones. If you have a problem with this material after the graded lab you can still ask teachers for help. 
+> - In this tutorial, all synchronization problems are solved only by use of FIFO/pipe. Adding another IPC like semaphore would cancel some of the restrictions (like multi process read from links). The purpose of this limitation is to highlight what you can do only on links and to show that mostly you do not need extra IPC to work on FIFO's and pipes.
+> - Do remember that links are unidirectional communication means. In case of FIFO it is easy to remember because you decide on the direction at open time. In case of pipe you get a pair of descriptors and you have to remember that index[0] is for reading and index[1] is for writing. Please notice the symmetry with standard input and output descriptors numbers (0 for input - reading, 1 for output - writing). I use the therm "other end" in the relation the read end and write end. Read end is the "other end" for write end. 
+> - If one link is used by multiple writing processes and one reading process then single write to it is  guaranteed to be continuous provide the write size does not exceed PIPE_BUF constant. If you plan such a communication model based solely on link you can not exceed this size in one message.
+> - There is no analogy for reversed model (to the one above) i.e. when multiple processes are reading from the pipe. In theory such a reads can interfere with each other.
+> - Braking of the link (caused by closing the link by all the processes on the opposite end or by killing those processes) will result in EOF (End of File, zero bytes read) state on reading end  or by SIGPIPE signal delivery to the writing end. The default reaction on the SIGPIPE signal is to kill the process. If this signal is blocked, ignored or handled then write to the link will result in EPIPE error.
+> - It is worth knowing that the same breaking rules apply to the sockets.
+> - Pipe is created already in connected/open state in opposite to the FIFO that must be connected before you can use it. If no O_NONBLOCK is applied to the link descriptor then the connecting process or thread is blocked until the connection is established on the other end of the link. If you use O_NONBLOCK then open process finish immediately but the link is unusable until it gets connected on the other end. If you try to write to unconnected link you will get ENXIO error and if you try to read from it EOF will be reported.
+> - PIPE_BUF on  Linux equals to 4kb
+> - According to  POSIX, PIPE_BUF has to be at least 512 bytes.]]></text>
+    </section>
+    <section id="questions" title="Questions" level="2" order="1" parent="tutorial-5-fifo-pipe">
+      <text><![CDATA[## Questions
+
+Do you need to divide the communication into PIPE_BUF parts in case of one to one connection i.e.  one process writes and one reads?
+
+**Answer:** There is no need to do it, there is no competition over the link, no interference from other processeses.
+
+Can you open a pipe or FIFO to communicate inside of one process/thread?
+
+**Answer:** It is possible and allowed but very rare case though.
+
+What extra precaution has to be taken in to consideration in above scenario?
+
+**Answer:** Deadlock, the link has internal buffer of PIPE_BUF size, if you overflow it the process/thraad will block as it cannot at the same read the excess of data from the link. This blockade can be prevented with O_NONBLOCK mode.
+
+Is quick sending a few portions of data (with multiple writes) of total size below PIPE_BUF guaranteed to be continous?
+
+**Answer:** NO, the guarantee is only valid for ONE write.
+
+In case of multiple writing processes that need to send messages of variant length, is sending them in atomic sizes enough for the receiving process to properly receive them?
+
+**Answer:** NO, the reading end must know how many bytes belong to each message. If size are mixed then it is impossible  to guess. You can add the size of the message at it beginning and the reader can first read the size, then the rest of the message or you can always use fixed size of the messages by adding something neutral (zero code may be a good choice for textual data) do fill the missing end part of the message.
+
+When can a write of  2*PIPE_BUF bytes to the link be interrupted?  How do you know about the interruption? The question concerns all types of possible interruptions - caused by signal handling function, CPU scheduler or broken link.
+
+**Answer:** Before anything is sent it (by signal), it is reported as EINTR error. After sending PIPE_BUF bytes (scheduler), then write returns less than expected size of 2*PIPE_BUF.
+
+Assuming very intensive signal handling in the program, how many times can the above write be interrupted?
+
+**Answer:** You can not tell exactly, multiple times before it starts and multiple times after first PIPE_BUF bytes transfer.
+
+When can be interrupted the transfer of PIPE_BUF bytes?
+
+**Answer:** It can be interrupted if you handle signals in the program only before any data gets transmitted (EINTR error) or by broken pipe.
+
+What does it mean if you read zero bytes from the link?
+
+**Answer:** EOF - broken pipe/fifo.
+
+What did you forget to check if your pipe/fifo program terminates abruptly with message about signal interruption?
+
+**Answer:** You forgot to check for broken pipe condition on write end, you should ignore SIGPIPE and check for EPIPE errors on write statements.
+
+Can EPIPE be reported on link read?
+
+**Answer:** NO, SIGPIPE/EPIPE concerns only writing to the link!
+
+Can writing to pipe report zero as return value?
+
+**Answer:** Assuming you did not try to write zero bytes it can not. EOF concerns only reads!]]></text>
+    </section>
+    <section id="task-1-fifo" title="Task 1 - FIFO" level="2" order="2" parent="tutorial-5-fifo-pipe">
+      <text><![CDATA[## Task 1 - FIFO
+
+Goal:
+
+Write client server application, communication between clients and the server is based on single shared FIFO.
+The server reads data from the connection,removes all non-alphanumerical characters from this input and prints processed
+data on the standard output along with senders PID number.
+Client input data comes from the file opened by the client (name of the file is one of the client parameters).
+
+Client application terminates as soon as all the file is sent. Server application terminates as soon as all clients
+disconnect from its FIFO. Both programs should correctly react to the lost connection on FIFO!
+
+Let's split the solution into the stages.
+
+What you should know:
+
+- `man 7 fifo`
+- `man 7 pipe`
+- `man 3p mkfifo`
+- `man 3 isalpha `
+- `man 0p limits.h ` 
+
+Makefile common for all the codes in this tutorial:
+
+```makefile
+CC=gcc
+CFLAGS= -std=gnu99 -Wall
+```]]></text>
+    </section>
+    <section id="stage-1" title="Stage 1" level="3" order="3" parent="task-1-fifo">
+      <text><![CDATA[### Stage 1 
+
+- Prepare simplified server that will create FIFO and will read data from it. What comes out of the FIFO will be filtered (alphanumeric chars only) and printed on the screen.
+- Use command `cat` as the client. 
+
+Solution **prog21a_s.c**:
+
+```c
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define ERR(source) (perror(source), fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), exit(EXIT_FAILURE))
+
+void usage(char *name)
+{
+    fprintf(stderr, "USAGE: %s fifo_file\n", name);
+    exit(EXIT_FAILURE);
+}
+
+void read_from_fifo(int fifo)
+{
+    ssize_t count;
+    char c;
+    do
+    {
+        if ((count = read(fifo, &c, 1)) < 0)
+            ERR("read");
+        if (count > 0 && isalnum(c))
+            printf("%c", c);
+    } while (count > 0);
+}
+
+int main(int argc, char **argv)
+{
+    int fifo;
+    if (argc != 2)
+        usage(argv[0]);
+
+    if (mkfifo(argv[1], S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0)
+        if (errno != EEXIST)
+            ERR("create fifo");
+    if ((fifo = open(argv[1], O_RDONLY)) < 0)
+        ERR("open");
+    read_from_fifo(fifo);
+    if (close(fifo) < 0)
+        ERR("close fifo:");
+    return EXIT_SUCCESS;
+}
+```
+
+
+Execution: `./prog21a_s a & sleep 1; cat prog21a_s.c > a`
+
+
+> Please remember to check for system function (open,close,read etc.) errors or even better all errors. By this you can tell a good programmer from the bad one.
+
+
+- Why there is one second sleep in execution command between a server start and a cat command?
+
+**Answer:** It allows enough time for the server to start up and create the fifo file "a", without it, the cat command can be first to create "a" as a regular file, then the server would not open a fifo but a regular file instead. You would not notice the problem if "a" already exists and is a FIFO, to reproduce the problem make sure "a" is missing and  remove the sleep 1 from the execution commands.
+
+- What is the type of "a" in file system and how to check it?
+
+**Answer:** $ls -l  - it is a fifo "p"
+
+- Why EEXIST reported by mkfifo is not treated as a critical error?
+
+**Answer:** We do not remove the fifo file in this stage, if you run the program for the second time "a" will be already in the filesystem and it can be safely reused instead of forcing the user to manually remove it every time.
+
+- Isn't reading from fifo char by char inefficient?
+
+**Answer:** The data is read from the fifo buffer, the only extra  overhead includes the one extra function call. It is not the fastest way but it also can not be called very inefficient.
+
+- Isn't writing char by char inefficient?
+
+**Answer:** In this program we write to buffered stream, the extra overhead is minimal, but when you write chat by char to unbuffered descriptor then the overhead becomes a serious problem.
+
+- How can you tell that the link does not have and will not have any more data for the reader?
+
+**Answer:** EOF - broken pipe detected on read occurs when all writing processes/threads disconnect the link and the buffer is depleted.]]></text>
+      <code ref="src/prog21a_s.c" lang="c"/>
+    </section>
+    <section id="stage-2" title="Stage 2" level="3" order="4" parent="task-1-fifo">
+      <text><![CDATA[### Stage 2
+
+- Prepare complete client program, it reads files and sends it via FIFO in PIPE_BUF chunks.
+- All chunks sent must be of PIPE_BUF size, including the last one.
+- Each chunk sent must be tagged with PID nuber
+
+Solution: **prog21_c.c**:
+
+
+```c
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define MSG_SIZE (PIPE_BUF - sizeof(pid_t))
+#define ERR(source) (perror(source), fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), exit(EXIT_FAILURE))
+
+void usage(char *name)
+{
+    fprintf(stderr, "USAGE: %s fifo_file file\n", name);
+    exit(EXIT_FAILURE);
+}
+
+void write_to_fifo(int fifo, int file)
+{
+    int64_t count;
+    char buffer[PIPE_BUF];
+    char *buf;
+    *((pid_t *)buffer) = getpid();
+    buf = buffer + sizeof(pid_t);
+
+    do
+    {
+        if ((count = read(file, buf, MSG_SIZE)) < 0)
+            ERR("Read:");
+        if (count < MSG_SIZE)
+            memset(buf + count, 0, MSG_SIZE - count);
+        if (count > 0)
+            if (write(fifo, buffer, PIPE_BUF) < 0)
+                ERR("Write:");
+    } while (count == MSG_SIZE);
+}
+
+int main(int argc, char **argv)
+{
+    int fifo, file;
+    if (argc != 3)
+        usage(argv[0]);
+
+    if (mkfifo(argv[1], S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0)
+        if (errno != EEXIST)
+            ERR("create fifo");
+    if ((fifo = open(argv[1], O_WRONLY)) < 0)
+        ERR("open");
+    if ((file = open(argv[2], O_RDONLY)) < 0)
+        ERR("file open");
+    write_to_fifo(fifo, file);
+    if (close(file) < 0)
+        perror("Close fifo:");
+    if (close(fifo) < 0)
+        perror("Close fifo:");
+    return EXIT_SUCCESS;
+}
+```
+
+
+Execution: `./prog21a_s a & ./prog21_c a prog21a_s.c`
+
+- Please notice how PID is stored in binary format in the buffer. This binary method saves time on conversions from and to text and the result always has the same easy to calculate size (sizeof(pid_t)). Technically it takes only some type casting and cleaver buffer shift to preserve the PID data at the beginning. You can use structures to store more complex variant size data  in the same way and provide both communicating programs were compiled in the same way (structures packing problem) it will work.
+- This time the program opens the fifo for writing instead of reading like server, please remember that fifos are unidirectional.
+
+- Why this time sleep was not required in execution commands?
+
+**Answer:** Now it does not matter who creates the fifo and what is the sequence of it's opening , the other side will always wait. The client program can create the fifo with mkfifo (unlike cat command) and  the nonblocking mode is not used.
+
+ - Why constant size of send messages is important in this program?
+
+**Answer:** This is the simplest way for the server to know how many bytes comes from one client.
+
+- What is memset used for?
+
+**Answer:** For a quick way to fill the missing part of the last buffer (to the required size of PIPE_BUF) with zeros. Zeros at the end of the string are natural terminators.
+
+- Can you send the zeros filling after the last part of the file in separated writes?
+
+**Answer:** NO, it can mix with the data from the other clients.
+ 
+- How this program will react to broken pipe (fifo in this case but we name any disconnected link in this way) ?
+
+**Answer:** It will be killed by SIGPIPE.]]></text>
+      <code ref="src/prog21_c.c" lang="c"/>
+    </section>
+    <section id="stage-3" title="Stage 3" level="3" order="5" parent="task-1-fifo">
+      <text><![CDATA[### Stage 3
+
+- Add chunking on the server side.
+- Add FIFO removal
+
+Solution **prog21b_s.c**:
+
+
+```c
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define ERR(source) (perror(source), fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), exit(EXIT_FAILURE))
+
+void usage(char *name)
+{
+    fprintf(stderr, "USAGE: %s fifo_file\n", name);
+    exit(EXIT_FAILURE);
+}
+
+void read_from_fifo(int fifo)
+{
+    ssize_t count, i;
+    char buffer[PIPE_BUF];
+    do
+    {
+        if ((count = read(fifo, buffer, PIPE_BUF)) < 0)
+            ERR("read");
+        if (count > 0)
+        {
+            printf("\nPID:%d-------------------------------------\n", *((pid_t *)buffer));
+            for (i = sizeof(pid_t); i < PIPE_BUF; i++)
+                if (isalnum(buffer[i]))
+                    printf("%c", buffer[i]);
+        }
+    } while (count > 0);
+}
+
+int main(int argc, char **argv)
+{
+    int fifo;
+    if (argc != 2)
+        usage(argv[0]);
+
+    if (mkfifo(argv[1], S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP) < 0)
+        if (errno != EEXIST)
+            ERR("create fifo");
+    if ((fifo = open(argv[1], O_RDONLY)) < 0)
+        ERR("open");
+    read_from_fifo(fifo);
+    if (close(fifo) < 0)
+        ERR("close fifo:");
+    if (unlink(argv[1]) < 0)
+        ERR("remove fifo:");
+    return EXIT_SUCCESS;
+}
+```
+
+
+Execution: `./prog21_c a Makefile & ./prog21_c a prog21b_s.c & ./prog21_c a prog21_c.c & sleep 1; ./prog21b_s a`
+
+- Please notice the unlink call at the end of the program, it removes fifos as well as regular files.
+- Please notice how PID is decoded from the buffer - nearly the same way it was coded.
+
+- Why sleep is used once more in the execution commands?
+
+**Answer:** Without this sleep it may happen that if one of the clients and the server are given enough CPU time earlier than the rest of the clients, they will be able to start, connect overt the FIFO and exchange the data. When sole connected client exits the server will assume that it should terminate before other client even got chance to connect to FIFO! The abandoned clients will hang for long on the fifo without a server to serve them.
+
+- How server knows how much bytes comes from one client?
+
+**Answer:** Messages have fixed size of PIPE_BUF.
+
+- Can we send blocks of more bytes than PIPE_BUF at a time?
+
+**Answer:** No, it is not guaranteed to be continuous/atomic.]]></text>
+      <code ref="src/prog21b_s.c" lang="c"/>
+    </section>
+    <section id="task-2-pipe" title="Task 2 - pipe" level="2" order="6" parent="tutorial-5-fifo-pipe">
+      <text><![CDATA[## Task 2 - pipe
+
+Goal:
+
+Write n-process program where n child processes communicate with parent over one shared pipe R and parent communicates with children using n dedicated pipes P1,P2,...,Pn
+On C-c parent process chooses random pipe Pk (where k in [1,n]) and sends random [a-z] char to it. On the same signal child processes terminate with 20% probability. Child process that can read  char C on its dedicated pipe should send a random size [1,200] buffer of chars C via parent pipe R.
+Parent process should print everything it receives on R pipe as soon as possible and terminate when all the child processes are gone.
+Let's split the solution into 2 stages.
+
+- Please notice that broken pipe in parent does not need to terminate the program, it must stop using this one pipe instead.
+- 200 bytes is the maximum buffer size, will it be atomic? On Linux and all POSIX compatible platforms yes but the problem is more complex, what if you need a bit  larger buffers? You can derive your size from PIPE_BUF (e.g. PIPE_BUFF/4) or test your max size against the PIPE_BUF and if it exceeds make it equal to PIPE_BUF. 
+
+What you should know:
+- `man 3p pipe`]]></text>
+    </section>
+    <section id="stage-1-2" title="Stage 1" level="3" order="7" parent="task-2-pipe">
+      <text><![CDATA[### Stage 1
+
+- Create n child processes.
+- Create pipes.
+- Close unused descriptors.
+- Initiate random numbers.
+- Parent process awaits data on pipe R and prints them on the stdout, it terminates after all data is processed.
+- Child process sends random char on R pipe and exits.
+
+
+Solution **prog22a.c**:
+
+```c
+#include <errno.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
+
+#define ERR(source) \
+    (fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), perror(source), kill(0, SIGKILL), exit(EXIT_FAILURE))
+
+int sethandler(void (*f)(int), int sigNo)
+{
+    struct sigaction act;
+    memset(&act, 0, sizeof(struct sigaction));
+    act.sa_handler = f;
+    if (-1 == sigaction(sigNo, &act, NULL))
+        return -1;
+    return 0;
+}
+
+void sigchld_handler(int sig)
+{
+    pid_t pid;
+    for (;;)
+    {
+        pid = waitpid(0, NULL, WNOHANG);
+        if (0 == pid)
+            return;
+        if (0 >= pid)
+        {
+            if (ECHILD == errno)
+                return;
+            ERR("waitpid:");
+        }
+    }
+}
+
+void child_work(int fd, int R)
+{
+    srand(getpid());
+    char c = 'a' + rand() % ('z' - 'a' + 1);
+    if (write(R, &c, 1) < 0)
+        ERR("write to R");
+}
+
+void parent_work(int n, int *fds, int R)
+{
+    char c;
+    int status;
+    srand(getpid());
+    while ((status = read(R, &c, 1)) == 1)
+        printf("%c", c);
+    if (status < 0)
+        ERR("read from R");
+    printf("\n");
+}
+
+void create_children_and_pipes(int n, int *fds, int R)
+{
+    int tmpfd[2];
+    int max = n;
+    while (n)
+    {
+        if (pipe(tmpfd))
+            ERR("pipe");
+        switch (fork())
+        {
+            case 0:
+                while (n < max)
+                    if (fds[n] && close(fds[n++]))
+                        ERR("close");
+                free(fds);
+                if (close(tmpfd[1]))
+                    ERR("close");
+                child_work(tmpfd[0], R);
+                if (close(tmpfd[0]))
+                    ERR("close");
+                if (close(R))
+                    ERR("close");
+                exit(EXIT_SUCCESS);
+
+            case -1:
+                ERR("Fork:");
+        }
+        if (close(tmpfd[0]))
+            ERR("close");
+        fds[--n] = tmpfd[1];
+    }
+}
+
+void usage(char *name)
+{
+    fprintf(stderr, "USAGE: %s n\n", name);
+    fprintf(stderr, "0<n<=10 - number of children\n");
+    exit(EXIT_FAILURE);
+}
+
+int main(int argc, char **argv)
+{
+    int n, *fds, R[2];
+    if (2 != argc)
+        usage(argv[0]);
+    n = atoi(argv[1]);
+    if (n <= 0 || n > 10)
+        usage(argv[0]);
+    if (pipe(R))
+        ERR("pipe");
+    if (NULL == (fds = (int *)malloc(sizeof(int) * n)))
+        ERR("malloc");
+    if (sethandler(sigchld_handler, SIGCHLD))
+        ERR("Seting parent SIGCHLD:");
+    create_children_and_pipes(n, fds, R[1]);
+    if (close(R[1]))
+        ERR("close");
+    parent_work(n, fds, R[0]);
+    while (n--)
+        if (fds[n] && close(fds[n]))
+            ERR("close");
+    if (close(R[0]))
+        ERR("close");
+    free(fds);
+    return EXIT_SUCCESS;
+}
+```
+
+
+
+- It is important to close all unused descriptors, this pipe program has a lot to close, please make sure you know which descriptors are to be closed right at the beginning.
+- Likewise descriptors unused memory should be released, make sure you know what heap parts should be deallocated in "child" process.
+- [a-z] characters randomization should be obvious. If it is not try to build more general formula from this example on paper, try to apply it to other ranges of chars and numbers.
+- Sometimes (set n=10 for most frequent observation) program stops with the message : "Interrupted system call" , why? 
+
+**Answer:** SIGCHLD handling interrupts read before it can read anything.
+ 
+- How can we protect the code from this interruption? 
+
+**Answer:** The simplest solution would be to add macro: TEMP_FAILURE_RETRY(read(...)).
+
+- How the program reacts on broken pipe R?
+
+**Answer:** This is natural end of the main loop and the program because it happens when all the children disconnect from R, they do it when they are terminating.
+
+- Why the parent process do not wait for children at the end of the process code? 
+
+**Answer:** In this code all the children must terminate to end the main parent loop, when the parent reaches the end of code there are no children to wait for as they all must have been waited for by SIGCHILD handler.]]></text>
+      <code ref="src/prog22a.c" lang="c"/>
+    </section>
+    <section id="stage-2-2" title="Stage 2" level="1" order="8" parent="">
+      <text><![CDATA[# Stage 2
+- Add SIGINT handling.
+- Protect system function from interruption by the signal handling function (all the code).
+- Add missing code.
+
+Solution **prog22b.c**:
+
+```c
+#define _GNU_SOURCE
+#include <errno.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
+
+#define ERR(source) \
+    (fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), perror(source), kill(0, SIGKILL), exit(EXIT_FAILURE))
+
+// MAX_BUFF must be in one byte range
+#define MAX_BUFF 200
+
+volatile sig_atomic_t last_signal = 0;
+
+int sethandler(void (*f)(int), int sigNo)
+{
+    struct sigaction act;
+    memset(&act, 0, sizeof(struct sigaction));
+    act.sa_handler = f;
+    if (-1 == sigaction(sigNo, &act, NULL))
+        return -1;
+    return 0;
+}
+
+void sig_handler(int sig) { last_signal = sig; }
+
+void sig_killme(int sig)
+{
+    if (rand() % 5 == 0)
+        exit(EXIT_SUCCESS);
+}
+
+void sigchld_handler(int sig)
+{
+    pid_t pid;
+    for (;;)
+    {
+        pid = waitpid(0, NULL, WNOHANG);
+        if (0 == pid)
+            return;
+        if (0 >= pid)
+        {
+            if (ECHILD == errno)
+                return;
+            ERR("waitpid:");
+        }
+    }
+}
+
+void child_work(int fd, int R)
+{
+    char c, buf[MAX_BUFF + 1];
+    unsigned char s;
+    srand(getpid());
+    if (sethandler(sig_killme, SIGINT))
+        ERR("Setting SIGINT handler in child");
+    for (;;)
+    {
+        if (TEMP_FAILURE_RETRY(read(fd, &c, 1)) < 1)
+            ERR("read");
+        s = 1 + rand() % MAX_BUFF;
+        buf[0] = s;
+        memset(buf + 1, c, s);
+        if (TEMP_FAILURE_RETRY(write(R, buf, s + 1)) < 0)
+            ERR("write to R");
+    }
+}
+
+void parent_work(int n, int *fds, int R)
+{
+    unsigned char c;
+    char buf[MAX_BUFF];
+    int status, i;
+    srand(getpid());
+    if (sethandler(sig_handler, SIGINT))
+        ERR("Setting SIGINT handler in parent");
+    for (;;)
+    {
+        if (SIGINT == last_signal)
+        {
+            i = rand() % n;
+            while (0 == fds[i % n] && i < 2 * n)
+                i++;
+            i %= n;
+            if (fds[i])
+            {
+                c = 'a' + rand() % ('z' - 'a' + 1);
+                status = TEMP_FAILURE_RETRY(write(fds[i], &c, 1));
+                if (status != 1)
+                {
+                    if (TEMP_FAILURE_RETRY(close(fds[i])))
+                        ERR("close");
+                    fds[i] = 0;
+                }
+            }
+            last_signal = 0;
+        }
+        status = read(R, &c, 1);
+        if (status < 0 && errno == EINTR)
+            continue;
+        if (status < 0)
+            ERR("read header from R");
+        if (0 == status)
+            break;
+        if (TEMP_FAILURE_RETRY(read(R, buf, c)) < c)
+            ERR("read data from R");
+        buf[(int)c] = 0;
+        printf("\n%s\n", buf);
+    }
+}
+
+void create_children_and_pipes(int n, int *fds, int R)
+{
+    int tmpfd[2];
+    int max = n;
+    while (n)
+    {
+        if (pipe(tmpfd))
+            ERR("pipe");
+        switch (fork())
+        {
+            case 0:
+                while (n < max)
+                    if (fds[n] && TEMP_FAILURE_RETRY(close(fds[n++])))
+                        ERR("close");
+                free(fds);
+                if (TEMP_FAILURE_RETRY(close(tmpfd[1])))
+                    ERR("close");
+                child_work(tmpfd[0], R);
+                if (TEMP_FAILURE_RETRY(close(tmpfd[0])))
+                    ERR("close");
+                if (TEMP_FAILURE_RETRY(close(R)))
+                    ERR("close");
+                exit(EXIT_SUCCESS);
+
+            case -1:
+                ERR("Fork:");
+        }
+        if (TEMP_FAILURE_RETRY(close(tmpfd[0])))
+            ERR("close");
+        fds[--n] = tmpfd[1];
+    }
+}
+
+void usage(char *name)
+{
+    fprintf(stderr, "USAGE: %s n\n", name);
+    fprintf(stderr, "0<n<=10 - number of children\n");
+    exit(EXIT_FAILURE);
+}
+
+int main(int argc, char **argv)
+{
+    int n, *fds, R[2];
+    if (2 != argc)
+        usage(argv[0]);
+    n = atoi(argv[1]);
+    if (n <= 0 || n > 10)
+        usage(argv[0]);
+    if (sethandler(SIG_IGN, SIGINT))
+        ERR("Setting SIGINT handler");
+    if (sethandler(SIG_IGN, SIGPIPE))
+        ERR("Setting SIGINT handler");
+    if (sethandler(sigchld_handler, SIGCHLD))
+        ERR("Setting parent SIGCHLD:");
+    if (pipe(R))
+        ERR("pipe");
+    if (NULL == (fds = (int *)malloc(sizeof(int) * n)))
+        ERR("malloc");
+    create_children_and_pipes(n, fds, R[1]);
+    if (TEMP_FAILURE_RETRY(close(R[1])))
+        ERR("close");
+    parent_work(n, fds, R[0]);
+    while (n--)
+        if (fds[n] && TEMP_FAILURE_RETRY(close(fds[n])))
+            ERR("close");
+    if (TEMP_FAILURE_RETRY(close(R[0])))
+        ERR("close");
+    free(fds);
+    return EXIT_SUCCESS;
+}
+```
+
+
+- Please notice that messages sent via pipe R have variant size - first byte states the message size.
+- As the size is coded in one byte it cannot exceed 255, the constant MAX_BUFF can not be increased beyond that value. It is not obvious and appropriate comment was added to warn whoever may try to do it. This is an example of absolutely necessary comment in the code.
+- This task algorithm invalidates the child pipe descriptors as children "die" with 20% probability on each SIGINT. To not try to send the letter to such a "dead" descriptor it must be somehow marked as unused. In this example we use value zero to indicate the inactivity. Zero is a perfectly valid value for descriptor but as it is  used for standard input and normally we do not close standard input zero can be used here as we do not expect pipe descriptor to get this value. Close function does not change the descriptor value to zero or -1, we must do it the code.
+- Random selection of child descriptor must deal with inactive (zero) values. Instead of reselection the program traverses the array in search for the nearby active  descriptor. To make the search easier the buffer is wrapped around with modulo operand, to prevent infinite search in case of empty array extra counter cannot exceed the longest distance between the hit and the last element in the array.
+
+---
+
+- Does this program correctly closes all its pipes? 
+
+**Answer:** No because in signal handler we used `exit()` we never reach closing. The program must be fixed. For example in signal handler we can set variable to signal that process should exit and then in `child_work` we can check it instead of using `TEMP_FAILURE_RETRY`
+
+- Where the parent program waits for the SIGINT signal? There is no blocking, no sigsuspend or sigwait?
+
+**Answer:** Most of the time program waits for input on the first read in parent's main loop, if it is interrupted by signal it exits with EINTR error.
+
+- Please notice that nearly every interruptible function in the code is restarted with TEMP_FAILURE_RETRY macro, all but one above mentioned read, why?
+
+**Answer:** With macro restarting this read, it would be impossible to react on the delivery of the signal and the program wouldn't work. In this case the interruption is a valid information for us!
+
+- Can we use SA_RESTART flag on signal handler to do the automatic restarts and get rid of TEMP_FAILURE_RETRY?
+
+**Answer:** No,  for the same reasons as described in the previous answer. Additionally our code would get less portable as I mentioned in preparation materials for L2 of OPS1.
+
+- Why not all C-c keystrokes result in printout from the program?
+
+**Answer:** It may be due to the chosen child terminating at the same SIGINT (it has 20% chance to do it), signals may merge in the time the main parent loop is still processing the previous C-c and is not waiting on the before mentioned read.
+ 
+- The second reason can be eliminated if you change global variable last_signal to act as the counter that gets increased every time signal arrives, then you can send as many chars to random children as your counter tells you. Please modify the program in this way as an exercise.
+- Can child process marge the signals?
+
+**Answer:** Only in theory as the signals are immediately and quickly handled.
+
+- Why parent can read the data from the pipe R in parts (first size, then the rest)  and child must send data to R in one write? 
+
+**Answer:** To prevent mixing of the data from various children, see the remarks at the beginning of this tutorial.
+
+- Why the program ignores SIGPIPE, is it safe?
+
+**Answer:** It is not only safe but also necessary, without it the attempt to send the char to "dead" child would kill the whole program. In many cases the fatal termination is NOT the CORRECT WAY of DEALING with BROKEN PIPE!
+
+- What is the STOP condition for a main parent loop?
+
+**Answer:** When parent reads zero bytes from R, it means broken pipe and it can only happen when all children are terminated.
+
+- A proper reaction to broken pipe is always important, check if you can indicate all broken pipe checks in the code, both on read and write. How many spots in the code can you find?
+
+**Answer:** 4
+
+- Why we use unsigned char type, what would happen if you remove unsigned from it?
+
+**Answer:** For buffers larger than 126, buffer sizes read from R would we treated as negative!
+
+- Why SIGINT is first ignored in the parent and the proper signal handler function is added after the children are created?
+
+**Answer:** To prevent the premature end of our program due to quick C-c before it is ready to handle it.
+
+- Is SIGCHLD handler absolutely necessary in this code?
+
+**Answer:** It won't break the logic, but without it zombi will linger and that is something a good programmer would not accept.]]></text>
+      <code ref="src/prog22b.c" lang="c"/>
+    </section>
+    <section id="source-codes-presented-in-this-tutorial" title="Source codes presented in this tutorial" level="2" order="9" parent="stage-2-2">
+      <text><![CDATA[## Source codes presented in this tutorial
+
+
+- [prog21_c.c](prog21_c.c)
+- [prog21a_s.c](prog21a_s.c)
+- [prog21b_s.c](prog21b_s.c)
+- [prog22a.c](prog22a.c)
+- [prog22b.c](prog22b.c)]]></text>
+    </section>
+    <section id="example-tasks" title="Example tasks" level="2" order="10" parent="stage-2-2">
+      <text><![CDATA[## Example tasks
+Do the example tasks. During the laboratory you will have more time and the starting code. However, if you finish the following tasks in the recommended time, you will know you're well prepared for the laboratory.
+
+- [Task 1](https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example1/) ~60 minutes
+- [Task 2](https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example2/) ~90 minutes
+- [Task 3](https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example3/) ~120 minutes
+- [Task 4](https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example4/) ~120 minutes
+- [Task 5](https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example5/) ~120 minutes]]></text>
+    </section>
+    <section id="additional-materials" title="Additional materials" level="2" order="11" parent="stage-2-2">
+      <text><![CDATA[## Additional materials
+
+- <http://cs341.cs.illinois.edu/coursebook/Ipc#pipes>
+- <http://cs341.cs.illinois.edu/coursebook/Ipc#named-pipes>]]></text>
+    </section>
+  </tutorial>
+  <tasks>
+    <task id="example1" title="Task on pipe/FIFO" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example1/">
+      <statement><![CDATA[## Goal
+
+Write a program that uses pipes to communication between three processes. The first process (parent) is connected using pipe to second process, which is connected to third process. The third process is connected back to the parent process, so all processes exchange messages in ring topology.
+
+After creating processes and pipes parent process sends `1` (as a null-terminated string). After that each process after receiving new number prints it to terminal with its `PID`. Then it add to that number random value in range `[-10,10]` and sends to the next process. If one of process receives `0` it should terminate. Other process should detect broken pipe and also terminates. All resources (memory, pipes) should be correctly released.]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[Create processes and pipes, correctly close unused descriptors. Each process should print descriptor it uses and closes. Parent process wait for children and then terminates.]]></stage>
+        <stage n="2"><![CDATA[Each process sends random number in range `[0-99]` and prints number received with its `PID` to stdout. At this stage you should handle variable length messages.]]></stage>
+        <stage n="3"><![CDATA[Parent process sends `1`, which travels without any change until receiving C-c.]]></stage>
+        <stage n="4"><![CDATA[Add number changing, STOP condition and pipe break check.]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+    <task id="example2" title="Task on pipe/FIFO" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example2/">
+      <statement><![CDATA[## Task
+
+Simulation of a multiplayer game. The program receives two integer arguments - `2 ≤ N ≤ 5` and
+`5 ≤ M ≤ 10`.
+
+In the task we simulate a card game. The main process - which will be referred to as the server - creates `N` child processes - which will be referred to as players. The players and the server communicate through pipes. At the start every player has `M` cards numbered from 1 to `M`. The server cyclically announces the start of a new round to the players. Every player must then choose and send to the server one (let's assume random) card from the ones he has left (they can't use a card twice). The player who sends the highest card wins the round and gets `N` points. When a draw occurs, the points are divided evenly among the winners and rounded down (eg. when there are 5 players in the game and 2 of them win, they both get 2 points). After `M` rounds the game ends and the player with the most points wins.
+
+1. The program (server) creates `N` player processes, every one is connected to the server by 2 pipes - one for sending and one for receiving messages. In the player processes **srand** is called to change the seed of the random number generator so that every player plays differently.
+
+2. All the messages sent between the server and the players are always 16 bytes (padded by zeros when needed).
+
+3. At the start of every round the server writes `NEW ROUND` to the terminal and sends the `new_round` message to every player.
+
+4. Every player waits for the `new_round` message from the server and chooses one of their cards randomly. They send that card to the server in the form of a single number representing the value of that card.
+
+5. After receiving a card from every player, the server chooses the winner(s) of the round based on the rules above. It sends back the number of points a given player has gained (in case of a loss, the player gets 0 points). The server process writes which player has played what card to the terminal.
+
+6. After `M` rounds the player processes should terminate. The server process prints the table of results to the terminal, waits for the player processes to terminate and also terminates.
+
+7. When the server can't send or receive a message to or from a player process, it prints an announcement to the terminal and continues the game without that player.
+
+8. Every unused end of a pipe should be closed. Obviously, every other resource should be freed when they aren't necessary.]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[Correct program initialization, creation of the player processes and the required pipes.]]></stage>
+        <stage n="2"><![CDATA[Every player process sends a random nonnegative integer `≤ M` to the server, for each the server process writes `Got number <X> from player <index>` to the terminal.]]></stage>
+        <stage n="3"><![CDATA[Implementation of rounds - the server cyclically sends to the players announcements that a new round has started. Players respond with a random card.]]></stage>
+        <stage n="4"><![CDATA[Full implementation of the game's rules, as above.]]></stage>
+        <stage n="5"><![CDATA[After a round starts, each player has a 5% chance of "failure" (premature termination). The server process correctly responds to such situation.]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+    <task id="example3" title="Task on pipe/FIFO" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example3/">
+      <statement><![CDATA[## Task
+In this task, we will simulate the OPS Laboratory. The laboratory consists of `n` (`3 <= n <= 20`, the only program parameter) students and one teacher. Students solve a task divided into four stages, worth 3, 6, 7, and 5 points respectively. Each student has a skill level `k` (a random integer, `3 <= k <= 9`), which determines their ability to solve the task.
+
+## Example output
+
+```
+./sop-lab 5
+Student: 47807
+Student: 47808
+Student: 47809
+Student: 47810
+Teacher: 47806
+Teacher: Is 47807 here?
+Student 47807: HERE!
+Teacher: Is 47808 here?
+Student: 47811
+Student 47808: HERE!
+Teacher: Is 47809 here?
+Student 47809: HERE!
+Teacher: Is 47810 here?
+Student 47810: HERE!
+Teacher: Is 47811 here?
+Student 47811: HERE!
+Teacher: Student 47808 finished stage 1
+Teacher: Student 47809 finished stage 1
+Teacher: Student 47811 finished stage 1
+Teacher: Student 47807 needs to fix stage 1
+Teacher: Student 47810 finished stage 1
+Teacher: Student 47809 finished stage 2
+Teacher: Student 47807 finished stage 1
+Teacher: Student 47808 needs to fix stage 2
+Teacher: Student 47810 finished stage 2
+Teacher: Student 47811 needs to fix stage 2
+Teacher: Student 47807 needs to fix stage 2
+Teacher: Student 47809 finished stage 3
+Teacher: Student 47810 needs to fix stage 3
+Teacher: Student 47808 needs to fix stage 2
+Teacher: Student 47807 needs to fix stage 2
+Teacher: Student 47809 needs to fix stage 4
+Teacher: Student 47811 needs to fix stage 2
+Teacher: Student 47807 needs to fix stage 2
+Teacher: Student 47809 needs to fix stage 4
+Teacher: Student 47807 finished stage 2
+Teacher: Student 47811 needs to fix stage 2
+Teacher: Student 47810 needs to fix stage 3
+Teacher: Student 47808 needs to fix stage 2
+Teacher: Student 47809 needs to fix stage 4
+Teacher: Student 47807 finished stage 3
+Teacher: Student 47811 finished stage 2
+Teacher: Student 47810 needs to fix stage 3
+Teacher: Student 47808 needs to fix stage 2
+Student 47807: I NAILED IT!
+Teacher: Student 47807 finished stage 4
+Teacher: END OF TIME!
+Teacher: 47807 - 21
+Teacher: 47808 - 3
+Teacher: 47809 - 16
+Teacher: 47810 - 9
+Teacher: 47811 - 9
+Teacher: IT'S FINALLY OVER!
+Student 47809: Oh no, I haven't finished stage 4. I need more time.
+Student 47810: Oh no, I haven't finished stage 3. I need more time.
+Student 47811: Oh no, I haven't finished stage 3. I need more time.
+Student 47808: Oh no, I haven't finished stage 2. I need more time.
+```]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[**Process Creation:**]]></stage>
+        <stage n="2"><![CDATA[The main process (teacher) creates `n` child processes (students).]]></stage>
+        <stage n="3"><![CDATA[Each student prints their process ID and exits.]]></stage>
+        <stage n="4"><![CDATA[**Attendance Check:**]]></stage>
+        <stage n="5"><![CDATA[Students communicate with the teacher through pipes.]]></stage>
+        <stage n="6"><![CDATA[A shared pipe allows students to write to the teacher, while the teacher communicates with each student through individual pipes.]]></stage>
+        <stage n="7"><![CDATA[The teacher takes attendance by sending `Teacher: Is [PID] here?` to each student and the standard output.]]></stage>
+        <stage n="8"><![CDATA[Students respond with `Student [PID]: HERE` through both the shared pipe and standard output.]]></stage>
+        <stage n="9"><![CDATA[After the attendance check, all processes exit.]]></stage>
+        <stage n="10"><![CDATA[**Task Stages:**]]></stage>
+        <stage n="11"><![CDATA[After the attendance check, students begin the task by following these steps for each stage:]]></stage>
+        <stage n="12"><![CDATA[Generate a random integer `t` in the range `[100, 500]`.]]></stage>
+        <stage n="13"><![CDATA[Wait `t` milliseconds.]]></stage>
+        <stage n="14"><![CDATA[Generate a random integer `q` from `[1, 20]`, representing their attempt score.]]></stage>
+        <stage n="15"><![CDATA[Compute their total attempt score as `k + q`.]]></stage>
+        <stage n="16"><![CDATA[Send their process ID and attempt score to the teacher.]]></stage>
+        <stage n="17"><![CDATA[The teacher compares the attempt score against the stage difficulty (`d`), which is calculated as the stage's base points plus a random integer from `[1, 20]`.]]></stage>
+        <stage n="18"><![CDATA[If `k + q >= d`, the student succeeds; otherwise, they fail. The information is sent back to the student.]]></stage>
+        <stage n="19"><![CDATA[The teacher prints one of the following messages:]]></stage>
+        <stage n="20"><![CDATA[`Teacher: Student [PID] finished stage [X]` (on success).]]></stage>
+        <stage n="21"><![CDATA[`Teacher: Student [PID] needs to fix stage [X]` (on failure).]]></stage>
+        <stage n="22"><![CDATA[If a student completes all four stages, they print `Student [PID]: I NAILED IT!` and exit.]]></stage>
+        <stage n="23"><![CDATA[The teacher waits for all students to finish. After all students exit, the teacher prints `Teacher: IT'S FINALLY OVER!` and exits.]]></stage>
+        <stage n="24"><![CDATA[**Time Limit:**]]></stage>
+        <stage n="25"><![CDATA[The laboratory session may end if time runs out. This is handled using the `alarm(2)` function after attendance is checked.]]></stage>
+        <stage n="26"><![CDATA[When the `SIGALRM` signal is received, the teacher prints `Teacher: END OF TIME!`, stops grading students, and prints a summary table before releasing resources and exiting.]]></stage>
+        <stage n="27"><![CDATA[Each student detects that the teacher has left and prints `Student [PID]: Oh no, I haven't finished stage [X]. I need more time.` before exiting.]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+    <task id="example4" title="Task on pipe/FIFO" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example4/">
+      <statement><![CDATA[## Task
+
+Write a roulette simulator using processes communicating through pipes.
+The program takes two parameters: number of players `N` (`N ≥ 1`) and player starting money `M` (`M ≥ 100`).
+
+Players bet on a single number `[0, 36]` with a `35:1` payout. The winning number is chosen randomly from `[0, 36]`.]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[The dealer (main process) creates `N` player processes. Each player prints:
+   `[process id]: I have [amount] and I'm going to play roulette`.]]></stage>
+        <stage n="2"><![CDATA[Players communicate with the dealer via pipes. Each player sends a bet amount (within their balance) and a chosen number.]]></stage>
+        <stage n="3"><![CDATA[The dealer prints: `Dealer: [process id] placed [amount] on [number]` after receiving a bet.]]></stage>
+        <stage n="4"><![CDATA[The dealer draws a random number and announces: `Dealer: [number] is the lucky number`.]]></stage>
+        <stage n="5"><![CDATA[After one round, all players and the dealer exit.]]></stage>
+        <stage n="6"><![CDATA[The game continues as long as at least one player has money.]]></stage>
+        <stage n="7"><![CDATA[If a player runs out of money, they print: `[process id]: I'm broke` and exit.]]></stage>
+        <stage n="8"><![CDATA[If a player wins, they print: `[process id]: I won [amount]`.]]></stage>
+        <stage n="9"><![CDATA[Once all players exit, the dealer prints: `Dealer: Casino always wins` and exits.]]></stage>
+        <stage n="10"><![CDATA[Each round, a player has a 10% chance to leave with their remaining money. They print: `[process id]: I saved [amount left]` and exit.]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+    <task id="example5" title="Task on pipe/FIFO" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example5/">
+      <statement><![CDATA[## Task
+
+Write a program to simulate "My Ship Sails" using processes that communicate via pipes.  
+The program takes two arguments:  
+`N` - number of players (`4 <= N <= 7`)  
+`M` - number of cards per hand (`M >= 4` and `M ⋅ N <= 52`)  
+
+## Rules
+
+Players are dealt `M` cards each from a 52-card deck (cards are represented as integers `0-51`).  
+Each turn, players simultaneously pass a card to their right neighbor.  
+The game continues until a player collects `M` cards of the same suit and declares: `My ship sails!`.  
+The first to declare wins.  
+The suit of a card can be determined using `% 4` operation.]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[**Initialize:**]]></stage>
+        <stage n="2"><![CDATA[The server process creates `N` player processes.]]></stage>
+        <stage n="3"><![CDATA[It shuffles the deck and deals `M` cards to each player via pipes.]]></stage>
+        <stage n="4"><![CDATA[Each player prints their received hand with their process ID and exits.]]></stage>
+        <stage n="5"><![CDATA[**Gameplay:**]]></stage>
+        <stage n="6"><![CDATA[Players form a ring, passing cards via pipes (`nᵗʰ` player → `(n+1 % N)ᵗʰ` player).]]></stage>
+        <stage n="7"><![CDATA[A player who collects `M` cards of the same suit prints `[PID]: My ship sails!` (game runs endlessly).]]></stage>
+        <stage n="8"><![CDATA[**Winning Condition:**]]></stage>
+        <stage n="9"><![CDATA[The server creates a shared pipe for winners to announce victory.]]></stage>
+        <stage n="10"><![CDATA[A player who wins writes their PID to the pipe, prints `[PID]: My ship sails!`, and exits.]]></stage>
+        <stage n="11"><![CDATA[The server reads the PID, prints `Server: [PID] won!`, and exits.]]></stage>
+        <stage n="12"><![CDATA[**Termination:**]]></stage>
+        <stage n="13"><![CDATA[`Ctrl-C` instantly stops all processes and cleans up resources.]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+  </tasks>
+  <sources>
+    <file ref="src/prog21_c.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/prog21_c.c"/>
+    <file ref="src/prog21a_s.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/prog21a_s.c"/>
+    <file ref="src/prog21b_s.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/prog21b_s.c"/>
+    <file ref="src/prog22a.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/prog22a.c"/>
+    <file ref="src/prog22b.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/prog22b.c"/>
+  </sources>
+  <references>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example1/" title="Task 1"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example2/" title="Task 2"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example3/" title="Task 3"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example4/" title="Task 4"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l5/example5/" title="Task 5"/>
+  </references>
+  <metadata/>
+</lab>

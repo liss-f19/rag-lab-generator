@@ -1,0 +1,71 @@
+{
+  "lab_id": "sop2/l8",
+  "course": "sop2",
+  "slug": "l8_datagram_servers",
+  "generated_at": "2026-09-22T09:14:50.723632",
+  "sources": [
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example2/sop-eden-init.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l8_datagram_servers/src/sop-eden-init.c",
+      "sha256": "19b83a31a9e9db82e426dcf49c659b68f8a2b9ef88a047dd3c7699833f51f9e6",
+      "fetched_at": "2026-09-22T09:14:50.715203"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example2/sop-eden-test.sh",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l8_datagram_servers/src/sop-eden-test.sh",
+      "sha256": "43f04103a332b11701a5f35f85ecfa0fd27b94ae6dbc59bd0eedc9cdd3c156ba",
+      "fetched_at": "2026-09-22T09:14:50.715393"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example2/sop-eden.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l8_datagram_servers/src/sop-eden.c",
+      "sha256": "18075fbc7505b811695a95335d0f2048b3bba33108e02bf4bef3d06b162d4d5a",
+      "fetched_at": "2026-09-22T09:14:50.715502"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l8/l8-1_client.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l8_datagram_servers/src/l8-1_client.c",
+      "sha256": "ce783a05cc4ddd9547c64b716ff5776b811abd1336e227d6ddba4aafd9b63be5",
+      "fetched_at": "2026-09-22T09:14:50.715608"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l8/l8-1_server.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l8_datagram_servers/src/l8-1_server.c",
+      "sha256": "5cd063de3b7eead464df556ddb45c2fd5eeeefe61b90f04ac6529b3c6c0977d4",
+      "fetched_at": "2026-09-22T09:14:50.715702"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l8/l8_common.h",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l8_datagram_servers/src/l8_common.h",
+      "sha256": "06d3bccb0955cefc7f7e6f7e6b2f75e7a6f68787db4983b92e010a1129ae2a89",
+      "fetched_at": "2026-09-22T09:14:50.715803"
+    }
+  ],
+  "slides": [
+    "sop2_deadlocks__Deadlocks_0.pdf",
+    "sop2_deadlocks__Deadlocks_0.txt",
+    "sop2_deadlocks__index.md",
+    "sop2_servers__Inet_3en_4.pdf",
+    "sop2_servers__Inet_3en_4.txt",
+    "sop2_servers__index.md",
+    "sop2_servers__slides.md",
+    "sop2_sockets__Inet_2en_9.pdf",
+    "sop2_sockets__Inet_2en_9.txt",
+    "sop2_sockets__index.md",
+    "sop2_sockets__slides.md"
+  ],
+  "extra": [
+    "lecture_4.pdf",
+    "lecture_4.txt",
+    "lecture_9.pdf",
+    "lecture_9.txt"
+  ],
+  "src": [
+    "l8-1_client.c",
+    "l8-1_server.c",
+    "l8_common.h",
+    "sop-eden-init.c",
+    "sop-eden-test.sh",
+    "sop-eden.c"
+  ]
+}

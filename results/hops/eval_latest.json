@@ -1,0 +1,611 @@
+[
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "lexical",
+      "hops": 1,
+      "needs_embeddings": false,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.5573770491803278,
+      "mrr": 0.39720921155347383,
+      "ndcg_at_k": 0.31627313405400254,
+      "latency_ms_p50": 46.92929101292975,
+      "n_queries": 61,
+      "hit_at_k": 0.5737704918032787,
+      "section_recall_at_k": 0.22093023255813954,
+      "coverage": 0.5,
+      "latency_ms_mean": 53.32085245706858,
+      "latency_ms_p50_warm": 46.92929101292975,
+      "latency_ms_first": 128.6084169987589,
+      "context_chars_mean": 14895.573770491803,
+      "distinct_documents_mean": 3.2295081967213113,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.06147540983606557,
+        "info": 0.00819672131147541,
+        "lecture": 0.2930327868852459,
+        "summary": 0.10450819672131148,
+        "task": 0.29098360655737704,
+        "tutorial": 0.24180327868852458
+      },
+      "support_distribution": {
+        "background": 0.02663934426229508,
+        "primary": 0.9733606557377049
+      }
+    },
+    "created_at": "2026-09-21T20:17:20.100971"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "lexical_idf",
+      "hops": 1,
+      "needs_embeddings": false,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.8278688524590164,
+      "mrr": 0.6266588602654176,
+      "ndcg_at_k": 0.45156493440927314,
+      "latency_ms_p50": 54.554166010348126,
+      "n_queries": 61,
+      "hit_at_k": 0.8360655737704918,
+      "section_recall_at_k": 0.313953488372093,
+      "coverage": 0.7540983606557377,
+      "latency_ms_mean": 60.701931001843704,
+      "latency_ms_p50_warm": 54.554166010348126,
+      "latency_ms_first": 105.8499579958152,
+      "context_chars_mean": 12069.803278688525,
+      "distinct_documents_mean": 3.6885245901639343,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.06762295081967214,
+        "info": 0.010245901639344262,
+        "lecture": 0.3790983606557377,
+        "summary": 0.14959016393442623,
+        "task": 0.1762295081967213,
+        "tutorial": 0.21721311475409835
+      },
+      "support_distribution": {
+        "background": 0.04918032786885246,
+        "primary": 0.9508196721311475
+      }
+    },
+    "created_at": "2026-09-21T20:17:23.806691"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "dense",
+      "hops": 1,
+      "needs_embeddings": true,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.9262295081967213,
+      "mrr": 0.7472872755659641,
+      "ndcg_at_k": 0.5628200900993111,
+      "latency_ms_p50": 87.74995800922625,
+      "n_queries": 61,
+      "hit_at_k": 0.9508196721311475,
+      "section_recall_at_k": 0.5,
+      "coverage": 0.8442622950819673,
+      "latency_ms_mean": 288.4306448710258,
+      "latency_ms_p50_warm": 87.74995800922625,
+      "latency_ms_first": 11916.10662502353,
+      "context_chars_mean": 10193.147540983606,
+      "distinct_documents_mean": 4.049180327868853,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.10245901639344263,
+        "info": 0.004098360655737705,
+        "lecture": 0.41188524590163933,
+        "summary": 0.1413934426229508,
+        "task": 0.10655737704918032,
+        "tutorial": 0.2336065573770492
+      },
+      "support_distribution": {
+        "background": 0.018442622950819672,
+        "primary": 0.9815573770491803
+      }
+    },
+    "created_at": "2026-09-21T20:17:41.404519"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "hybrid_rrf",
+      "hops": 1,
+      "needs_embeddings": true,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.7868852459016393,
+      "mrr": 0.6225800156128025,
+      "ndcg_at_k": 0.46955121577305886,
+      "latency_ms_p50": 109.0864579891786,
+      "n_queries": 61,
+      "hit_at_k": 0.8032786885245902,
+      "section_recall_at_k": 0.3023255813953488,
+      "coverage": 0.7131147540983607,
+      "latency_ms_mean": 229.24940785312964,
+      "latency_ms_p50_warm": 109.0864579891786,
+      "latency_ms_first": 6975.068125000689,
+      "context_chars_mean": 11507.147540983606,
+      "distinct_documents_mean": 3.901639344262295,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.06967213114754098,
+        "info": 0.0020491803278688526,
+        "lecture": 0.4364754098360656,
+        "summary": 0.20491803278688525,
+        "task": 0.13524590163934427,
+        "tutorial": 0.15163934426229508
+      },
+      "support_distribution": {
+        "background": 0.03278688524590164,
+        "primary": 0.9672131147540983
+      }
+    },
+    "created_at": "2026-09-21T20:17:55.392776"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "hybrid_rrf_idf",
+      "hops": 1,
+      "needs_embeddings": true,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.8688524590163934,
+      "mrr": 0.7134074941451991,
+      "ndcg_at_k": 0.53845449241029,
+      "latency_ms_p50": 120.26299998979084,
+      "n_queries": 61,
+      "hit_at_k": 0.8852459016393442,
+      "section_recall_at_k": 0.45348837209302323,
+      "coverage": 0.7950819672131147,
+      "latency_ms_mean": 255.43392824436552,
+      "latency_ms_p50_warm": 120.26299998979084,
+      "latency_ms_first": 7972.554084000876,
+      "context_chars_mean": 10336.88524590164,
+      "distinct_documents_mean": 3.9836065573770494,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.06352459016393443,
+        "info": 0.00819672131147541,
+        "lecture": 0.4344262295081967,
+        "summary": 0.19467213114754098,
+        "task": 0.10450819672131148,
+        "tutorial": 0.19467213114754098
+      },
+      "support_distribution": {
+        "background": 0.02663934426229508,
+        "primary": 0.9733606557377049
+      }
+    },
+    "created_at": "2026-09-21T20:18:10.978813"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "lexical",
+      "hops": 2,
+      "needs_embeddings": false,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.5573770491803278,
+      "mrr": 0.32017954722872755,
+      "ndcg_at_k": 0.19886269932206913,
+      "latency_ms_p50": 61.567875003675,
+      "n_queries": 61,
+      "hit_at_k": 0.5737704918032787,
+      "section_recall_at_k": 0.0,
+      "coverage": 0.5491803278688525,
+      "latency_ms_mean": 77.20801436063665,
+      "latency_ms_p50_warm": 61.567875003675,
+      "latency_ms_first": 165.71416601072997,
+      "context_chars_mean": 21443.245901639344,
+      "distinct_documents_mean": 5.295081967213115,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.694672131147541,
+        "lecture": 0.20901639344262296,
+        "summary": 0.01639344262295082,
+        "task": 0.06557377049180328,
+        "tutorial": 0.014344262295081968
+      },
+      "support_distribution": {
+        "background": 0.0020491803278688526,
+        "primary": 0.9979508196721312
+      }
+    },
+    "created_at": "2026-09-21T20:18:15.692310"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "lexical_idf",
+      "hops": 2,
+      "needs_embeddings": false,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.6885245901639344,
+      "mrr": 0.470647931303669,
+      "ndcg_at_k": 0.2503166574126169,
+      "latency_ms_p50": 70.91983401915058,
+      "n_queries": 61,
+      "hit_at_k": 0.7049180327868853,
+      "section_recall_at_k": 0.0,
+      "coverage": 0.680327868852459,
+      "latency_ms_mean": 83.4599125416583,
+      "latency_ms_p50_warm": 70.91983401915058,
+      "latency_ms_first": 122.39258401677944,
+      "context_chars_mean": 20203.377049180326,
+      "distinct_documents_mean": 5.360655737704918,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.6434426229508197,
+        "info": 0.004098360655737705,
+        "lecture": 0.2336065573770492,
+        "summary": 0.03483606557377049,
+        "task": 0.045081967213114756,
+        "tutorial": 0.0389344262295082
+      },
+      "support_distribution": {
+        "background": 0.004098360655737705,
+        "primary": 0.9959016393442623
+      }
+    },
+    "created_at": "2026-09-21T20:18:20.786630"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "dense",
+      "hops": 2,
+      "needs_embeddings": true,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.819672131147541,
+      "mrr": 0.4814207650273224,
+      "ndcg_at_k": 0.2697026580210978,
+      "latency_ms_p50": 103.70358297950588,
+      "n_queries": 61,
+      "hit_at_k": 0.8360655737704918,
+      "section_recall_at_k": 0.046511627906976744,
+      "coverage": 0.8114754098360656,
+      "latency_ms_mean": 241.2031994742288,
+      "latency_ms_p50_warm": 103.70358297950588,
+      "latency_ms_first": 7465.9322920197155,
+      "context_chars_mean": 18013.885245901638,
+      "distinct_documents_mean": 5.852459016393443,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.5840163934426229,
+        "info": 0.004098360655737705,
+        "lecture": 0.29918032786885246,
+        "summary": 0.04918032786885246,
+        "task": 0.0020491803278688526,
+        "tutorial": 0.06147540983606557
+      },
+      "support_distribution": {
+        "primary": 1.0
+      }
+    },
+    "created_at": "2026-09-21T20:18:35.504245"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "hybrid_rrf",
+      "hops": 2,
+      "needs_embeddings": true,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.6721311475409836,
+      "mrr": 0.41424668227946915,
+      "ndcg_at_k": 0.21065196457244198,
+      "latency_ms_p50": 122.96204201993532,
+      "n_queries": 61,
+      "hit_at_k": 0.6885245901639344,
+      "section_recall_at_k": 0.023255813953488372,
+      "coverage": 0.6639344262295082,
+      "latency_ms_mean": 242.15563324749562,
+      "latency_ms_p50_warm": 122.96204201993532,
+      "latency_ms_first": 6792.7678329870105,
+      "context_chars_mean": 19158.786885245903,
+      "distinct_documents_mean": 5.737704918032787,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.6413934426229508,
+        "lecture": 0.28688524590163933,
+        "summary": 0.036885245901639344,
+        "task": 0.010245901639344262,
+        "tutorial": 0.02459016393442623
+      },
+      "support_distribution": {
+        "primary": 1.0
+      }
+    },
+    "created_at": "2026-09-21T20:18:50.279979"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "hybrid_rrf_idf",
+      "hops": 2,
+      "needs_embeddings": true,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.7704918032786885,
+      "mrr": 0.47419984387197506,
+      "ndcg_at_k": 0.2574921606650213,
+      "latency_ms_p50": 136.7151660087984,
+      "n_queries": 61,
+      "hit_at_k": 0.7868852459016393,
+      "section_recall_at_k": 0.046511627906976744,
+      "coverage": 0.7459016393442623,
+      "latency_ms_mean": 263.925522507634,
+      "latency_ms_p50_warm": 136.7151660087984,
+      "latency_ms_first": 7301.188000012189,
+      "context_chars_mean": 18409.016393442624,
+      "distinct_documents_mean": 5.704918032786885,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.6024590163934426,
+        "info": 0.004098360655737705,
+        "lecture": 0.2889344262295082,
+        "summary": 0.05327868852459016,
+        "task": 0.004098360655737705,
+        "tutorial": 0.0471311475409836
+      },
+      "support_distribution": {
+        "primary": 1.0
+      }
+    },
+    "created_at": "2026-09-21T20:19:06.383708"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "lexical",
+      "hops": 3,
+      "needs_embeddings": false,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.5081967213114754,
+      "mrr": 0.24428181108508978,
+      "ndcg_at_k": 0.13850321235148436,
+      "latency_ms_p50": 117.1624579874333,
+      "n_queries": 61,
+      "hit_at_k": 0.5245901639344263,
+      "section_recall_at_k": 0.0,
+      "coverage": 0.5,
+      "latency_ms_mean": 140.4802438504345,
+      "latency_ms_p50_warm": 117.1624579874333,
+      "latency_ms_first": 213.35575002012774,
+      "context_chars_mean": 22040.573770491803,
+      "distinct_documents_mean": 5.442622950819672,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.7827868852459017,
+        "lecture": 0.17827868852459017,
+        "summary": 0.00819672131147541,
+        "task": 0.030737704918032786
+      },
+      "support_distribution": {
+        "primary": 1.0
+      }
+    },
+    "created_at": "2026-09-21T20:19:14.957143"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "lexical_idf",
+      "hops": 3,
+      "needs_embeddings": false,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.5901639344262295,
+      "mrr": 0.32884465261514445,
+      "ndcg_at_k": 0.17082748326467703,
+      "latency_ms_p50": 177.37637500977144,
+      "n_queries": 61,
+      "hit_at_k": 0.6065573770491803,
+      "section_recall_at_k": 0.0,
+      "coverage": 0.5819672131147541,
+      "latency_ms_mean": 197.17902257479346,
+      "latency_ms_p50_warm": 177.37637500977144,
+      "latency_ms_first": 423.0856249923818,
+      "context_chars_mean": 21841.475409836065,
+      "distinct_documents_mean": 5.770491803278689,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.7766393442622951,
+        "lecture": 0.18442622950819673,
+        "summary": 0.01639344262295082,
+        "task": 0.022540983606557378
+      },
+      "support_distribution": {
+        "primary": 1.0
+      }
+    },
+    "created_at": "2026-09-21T20:19:26.989561"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "dense",
+      "hops": 3,
+      "needs_embeddings": true,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.6065573770491803,
+      "mrr": 0.28225995316159247,
+      "ndcg_at_k": 0.1418471996792164,
+      "latency_ms_p50": 140.60304101440124,
+      "n_queries": 61,
+      "hit_at_k": 0.6229508196721312,
+      "section_recall_at_k": 0.0,
+      "coverage": 0.5983606557377049,
+      "latency_ms_mean": 402.0647847873243,
+      "latency_ms_p50_warm": 140.60304101440124,
+      "latency_ms_first": 15066.21845799964,
+      "context_chars_mean": 20429.16393442623,
+      "distinct_documents_mean": 6.065573770491803,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.7418032786885246,
+        "lecture": 0.2459016393442623,
+        "summary": 0.012295081967213115
+      },
+      "support_distribution": {
+        "primary": 1.0
+      }
+    },
+    "created_at": "2026-09-21T20:19:51.520490"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "hybrid_rrf",
+      "hops": 3,
+      "needs_embeddings": true,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.5409836065573771,
+      "mrr": 0.27913739266198284,
+      "ndcg_at_k": 0.13810168733034142,
+      "latency_ms_p50": 170.32050000852905,
+      "n_queries": 61,
+      "hit_at_k": 0.5573770491803278,
+      "section_recall_at_k": 0.0,
+      "coverage": 0.5327868852459017,
+      "latency_ms_mean": 363.9643620337039,
+      "latency_ms_p50_warm": 170.32050000852905,
+      "latency_ms_first": 11097.607208008412,
+      "context_chars_mean": 20630.0,
+      "distinct_documents_mean": 5.819672131147541,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.7418032786885246,
+        "lecture": 0.24385245901639344,
+        "summary": 0.006147540983606557,
+        "task": 0.00819672131147541
+      },
+      "support_distribution": {
+        "primary": 1.0
+      }
+    },
+    "created_at": "2026-09-21T20:20:13.727794"
+  },
+  {
+    "config": {
+      "rag": "graph",
+      "chunker": "hierarchical",
+      "searcher": "graph_walk",
+      "embedder": "bge_m3",
+      "k": 8,
+      "inner_searcher": "hybrid_rrf_idf",
+      "hops": 3,
+      "needs_embeddings": true,
+      "needs_graph": true
+    },
+    "metrics": {
+      "recall_at_k": 0.6229508196721312,
+      "mrr": 0.31420765027322406,
+      "ndcg_at_k": 0.15933129888920958,
+      "latency_ms_p50": 184.23445901134983,
+      "n_queries": 61,
+      "hit_at_k": 0.639344262295082,
+      "section_recall_at_k": 0.0,
+      "coverage": 0.6147540983606558,
+      "latency_ms_mean": 340.12937765724985,
+      "latency_ms_p50_warm": 184.23445901134983,
+      "latency_ms_first": 8298.726250010077,
+      "context_chars_mean": 20387.27868852459,
+      "distinct_documents_mean": 5.852459016393443,
+      "n_section_queries": 43,
+      "kind_distribution": {
+        "code": 0.7438524590163934,
+        "lecture": 0.22950819672131148,
+        "summary": 0.018442622950819672,
+        "tutorial": 0.00819672131147541
+      },
+      "support_distribution": {
+        "primary": 1.0
+      }
+    },
+    "created_at": "2026-09-21T20:20:34.480360"
+  }
+]

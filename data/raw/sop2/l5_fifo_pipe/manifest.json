@@ -1,0 +1,60 @@
+{
+  "lab_id": "sop2/l5",
+  "course": "sop2",
+  "slug": "l5_fifo_pipe",
+  "generated_at": "2026-09-22T09:14:50.678847",
+  "sources": [
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l5/prog21_c.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l5_fifo_pipe/src/prog21_c.c",
+      "sha256": "b1f01ba3499a6f7bee7c7cd7a25713116fb831ff192990c44c761956ec189f74",
+      "fetched_at": "2026-09-22T09:14:50.673598"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l5/prog21a_s.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l5_fifo_pipe/src/prog21a_s.c",
+      "sha256": "d98aa46f206815c070861157d54556b8d8d667e21085cd89c16b02066237221d",
+      "fetched_at": "2026-09-22T09:14:50.673718"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l5/prog21b_s.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l5_fifo_pipe/src/prog21b_s.c",
+      "sha256": "a399faec9a2a7981021c6567154828faccb3647ca6a556d44a25c2d0c62c744e",
+      "fetched_at": "2026-09-22T09:14:50.673870"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l5/prog22a.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l5_fifo_pipe/src/prog22a.c",
+      "sha256": "885d64303bb58b86dc6e5836331133fc26754b2c2ac522b484727ed25579702f",
+      "fetched_at": "2026-09-22T09:14:50.674189"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l5/prog22b.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l5_fifo_pipe/src/prog22b.c",
+      "sha256": "5d465068d4ac26b622edc6d948cb82d56c90d12e02971717e1f798fa8df8cf5e",
+      "fetched_at": "2026-09-22T09:14:50.674415"
+    }
+  ],
+  "slides": [
+    "sop1_mqueue__IPC_1en_3.pdf",
+    "sop1_mqueue__IPC_1en_3.txt",
+    "sop1_mqueue__index.md",
+    "sop1_pipe__IPC_intro.pdf",
+    "sop1_pipe__IPC_intro.txt",
+    "sop1_pipe__POSIX-pipes.pdf",
+    "sop1_pipe__POSIX-pipes.txt",
+    "sop1_pipe__index.md",
+    "sop2_sync2__IPC_2en_4.pdf",
+    "sop2_sync2__IPC_2en_4.txt",
+    "sop2_sync2__index.md",
+    "sop2_sync2__slides.md"
+  ],
+  "extra": [],
+  "src": [
+    "prog21_c.c",
+    "prog21a_s.c",
+    "prog21b_s.c",
+    "prog22a.c",
+    "prog22b.c"
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "lab_id": "sop2/l6",
+  "course": "sop2",
+  "slug": "l6_shm_mmap",
+  "generated_at": "2026-09-22T09:14:50.698445",
+  "sources": [
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l6/example2-code.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l6_shm_mmap/src/example2-code.c",
+      "sha256": "f7d5b6e58e1394ff4d35a4848a567b5afc10e5223258cde8ee9b1079bf8b2f99",
+      "fetched_at": "2026-09-22T09:14:50.689140"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l6/l6-1.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l6_shm_mmap/src/l6-1.c",
+      "sha256": "92adefbe56f75b19b3b0f32985761bbd84a467aaef71f81c4f4f697f4e185dcf",
+      "fetched_at": "2026-09-22T09:14:50.689243"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l6/l6-2_client.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l6_shm_mmap/src/l6-2_client.c",
+      "sha256": "0bd09631b638483929f039ea49b3bf9355e1e08c1e9cf778c69597feb2f50898",
+      "fetched_at": "2026-09-22T09:14:50.689438"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop2/lab/l6/l6-2_server.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l6_shm_mmap/src/l6-2_server.c",
+      "sha256": "e84f9fde562711f0523d3954fbfc9e1caf4b4474e33898aaefa393346ff33d29",
+      "fetched_at": "2026-09-22T09:14:50.689536"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop2l6e3.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l6_shm_mmap/src/sop2l6e3.zip",
+      "sha256": "402ac6533d35b7d50f73c53e63a098486f27e201590682effdd60acb653485bd",
+      "fetched_at": "2026-09-22T09:14:50.689785"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop2l6e3.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l6_shm_mmap/src/sop2l6e3/Makefile",
+      "sha256": "2617530527842e39d01a5ffab2f83f6c2c52e1e7da81d61b96dff8ec0aa065e3",
+      "fetched_at": "2026-09-22T09:14:50.690457"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop2l6e3.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l6_shm_mmap/src/sop2l6e3/channel.c",
+      "sha256": "da7e687d5855b141475ddec7b16461c3f1b0b3ab0973f6a9727d0e55e70b1d8d",
+      "fetched_at": "2026-09-22T09:14:50.690477"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop2l6e3.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l6_shm_mmap/src/sop2l6e3/channel.h",
+      "sha256": "118f2d4383edf03f80a58de6fa469e7608b28167920259be4c71ac1fd8c611c1",
+      "fetched_at": "2026-09-22T09:14:50.690497"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop2l6e3.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l6_shm_mmap/src/sop2l6e3/macros.h",
+      "sha256": "499667fa240c6b1b4ce02dd08f18ff8a1cd8ede5712248a3d5a968f252716792",
+      "fetched_at": "2026-09-22T09:14:50.690515"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/files/sop2l6e3.zip",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop2/l6_shm_mmap/src/sop2l6e3/ops-double-processor.c",
+      "sha256": "0031a41c779f6daec8a1a0363a6ab500c16a6ff8c1615e78467d0c4d4d6ba58b",
+      "fetched_at": "2026-09-22T09:14:50.690533"
+    }
+  ],
+  "slides": [
+    "sop2_mem__Mem_en_1.pdf",
+    "sop2_mem__Mem_en_1.txt",
+    "sop2_mem__index.md",
+    "sop2_mem__slides.md",
+    "sop2_shm__index.md",
+    "sop2_shm__slides.md",
+    "sop2_sync2__IPC_2en_4.pdf",
+    "sop2_sync2__IPC_2en_4.txt",
+    "sop2_sync2__index.md",
+    "sop2_sync2__slides.md",
+    "sop2_sync__Sync_2.pdf",
+    "sop2_sync__Sync_2.txt",
+    "sop2_sync__index.md",
+    "sop2_sync__slides.md",
+    "sop2_vmem__VM_en_4.pdf",
+    "sop2_vmem__VM_en_4.txt",
+    "sop2_vmem__index.md",
+    "sop2_vmem__slides.md"
+  ],
+  "extra": [],
+  "src": [
+    "example2-code.c",
+    "l6-1.c",
+    "l6-2_client.c",
+    "l6-2_server.c",
+    "sop2l6e3.zip",
+    "sop2l6e3/Makefile",
+    "sop2l6e3/channel.c",
+    "sop2l6e3/channel.h",
+    "sop2l6e3/macros.h",
+    "sop2l6e3/ops-double-processor.c"
+  ]
+}

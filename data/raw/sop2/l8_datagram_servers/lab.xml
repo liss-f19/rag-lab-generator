@@ -1,0 +1,624 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<lab id="sop2/l8" course="sop2" number="8" slug="l8_datagram_servers" lang="en" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/">
+  <title>Datagram protocols and multithreaded servers</title>
+  <topics>
+    <topic>SOCK_DGRAM</topic>
+    <topic>unix</topic>
+    <topic>AF_INET6</topic>
+    <topic>udp</topic>
+    <topic>listen</topic>
+    <topic>recvfrom</topic>
+    <topic>sendto</topic>
+    <topic>recv</topic>
+    <topic>send</topic>
+  </topics>
+  <tutorial>
+    <section id="datagram-protocols" title="Datagram Protocols" level="2" order="0" parent="">
+      <text><![CDATA[## Datagram Protocols
+
+Unlike stream protocols such as TCP, in datagram protocols we transmit packets of data, that is, _datagrams_.
+As with stream protocols, we will study them in the context of both network (UDP) and local sockets (UNIX).]]></text>
+    </section>
+    <section id="unix" title="UNIX" level="3" order="1" parent="datagram-protocols">
+      <text><![CDATA[### UNIX
+
+A local datagram socket is created similarly to a stream socket, simply by specifying `SOCK_DGRAM` as the protocol type:
+
+```C
+socket(PF_UNIX, SOCK_DGRAM, 0)
+```
+
+All rules related to local sockets apply (`man 7 unix`).
+It is worth noting that, unlike network datagram sockets (UDP), local ones are reliable - `as on most UNIX implementations, UNIX domain datagram sockets are always reliable and don't reorder datagrams`.
+This makes them a fairly convenient way to send messages between processes.
+For example, we do not have the message coalescing problem known from stream protocols.]]></text>
+    </section>
+    <section id="udp" title="UDP" level="3" order="2" parent="datagram-protocols">
+      <text><![CDATA[### UDP
+
+A network datagram socket, i.e. a UDP socket, is created analogously to TCP - it is enough to change the type to `SOCK_DGRAM`, for example:
+
+```C
+socket(AF_INET, SOCK_DGRAM, 0)
+```
+
+for an IPv4 socket (`AF_INET6` for IPv6).
+
+To learn more about UDP, be sure to read `man 7 udp` and the [lecture on network sockets](../../wyk/sockets/).
+In particular, it is important to understand that UDP is unreliable - messages may be lost, arrive out of order, arrive duplicated, etc.
+However, because UDP does not have the reliability overhead of TCP, it allows messages to be transmitted with lower latency.
+It is therefore used in applications where fast data delivery is more important than reliability, such as online multiplayer games.
+Because UDP is connectionless, it supports so-called _broadcast_, i.e. sending one message to many addresses.]]></text>
+    </section>
+    <section id="communication" title="Communication" level="3" order="3" parent="datagram-protocols">
+      <text><![CDATA[### Communication
+
+Datagram protocols are connectionless - we do not call `connect` on the client side, nor `listen` and `accept` on the server side.
+Instead, we simply have two functions for sending and receiving data:
+
+```C
+ssize_t recvfrom(int socket, void *restrict buffer, size_t length,
+    int flags, struct sockaddr *restrict address, socklen_t *restrict address_len);
+
+ssize_t sendto(int socket, const void *message, size_t length,
+    int flags, const struct sockaddr *dest_addr, socklen_t dest_len);
+``` 
+
+Read their manual pages - `man 3p recvfrom` and `man 3p sendto`.
+As you can see, these functions are analogous to `recv` and `send`, but they take two additional parameters: the address and its size.
+
+When receiving a message with `recvfrom`, it is worth paying attention to its specific behavior.
+This function returns the number of bytes read, but it always reads only one message (datagram) at a time.
+The `length` parameter indicates the size of the provided `buffer` and means the _maximum_ size of a message we expect.
+
+If the message is shorter, it will simply be read in full; if it is longer, the extra bytes will be **ignored and discarded**.
+Therefore, it is important that `buffer` has an appropriate size, and that the `length` parameter is set to the size of the largest message our program supports, not the size of the message we currently expect.
+In UDP, we have no guarantee that messages will arrive in the correct order.
+
+In `man 2 recvfrom` you can find some additional information specific to Linux.
+For example, there is the `recvmsg` function, which in some cases allows better performance and can, for instance, return a flag indicating that a message was truncated. 
+Remember, however, that the contents of that manual page are not part of the POSIX standard and are therefore not portable to other Unix systems (e.g. macOS, BSD).
+During the laboratory, we generally use only functions from the standard.
+
+The `sendto` function is even simpler to use - it either sends the entire datagram, or it fails and sends nothing.]]></text>
+    </section>
+    <section id="task" title="Task" level="2" order="4" parent="">
+      <text><![CDATA[## Task
+
+Goal:
+ 
+Write client and a server program that communicate over UDP socket. Client task is to send a file divided into proper size datagrams to the server. Server prints out the received data without information about the source.
+Each packet send to server must be confirmed with return message. If confirmation is missing (wait 0,5 sec.) resend the packet again. If 5 tries in a row fail, client program exits with an error. Both data packets and confirmations can be lost, program must resolve this issue. Server can not print the same part of the file more than once.
+All metadata (everything apart from file content) send over the udp socket must be converted to int32_t type. You can assume that maximum allowed datagram (all data and metadata) size is 576B. Server can handle 5 concurrent transmissions at a time. If sixth client tries to send data it should be ignored.
+Server program takes port as its sole parameter, client takes address and port of the server as well as file name as its parameters. 
+	
+
+What you need to know:
+```
+man 7 udp
+man 3p sendto
+man 3p recvfrom
+man 3p recv
+man 3p send
+```
+
+
+Solution `l8-1_server.c`:
+
+```c
+#include "l8_common.h"
+
+#define BACKLOG 3
+#define MAXBUF 576
+#define MAXADDR 5
+
+struct connections
+{
+    int free;
+    int32_t chunkNo;
+    struct sockaddr_in addr;
+};
+
+int make_socket(int domain, int type)
+{
+    int sock;
+    sock = socket(domain, type, 0);
+    if (sock < 0)
+        ERR("socket");
+    return sock;
+}
+
+int bind_inet_socket(uint16_t port, int type)
+{
+    struct sockaddr_in addr;
+    int socketfd, t = 1;
+    socketfd = make_socket(PF_INET, type);
+    memset(&addr, 0, sizeof(struct sockaddr_in));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    if (setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(t)))
+        ERR("setsockopt");
+    if (bind(socketfd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        ERR("bind");
+    if (SOCK_STREAM == type)
+        if (listen(socketfd, BACKLOG) < 0)
+            ERR("listen");
+    return socketfd;
+}
+
+int findIndex(struct sockaddr_in addr, struct connections con[MAXADDR])
+{
+    int i, empty = -1, pos = -1;
+    for (i = 0; i < MAXADDR; i++)
+    {
+        if (con[i].free)
+            empty = i;
+        else if (0 == memcmp(&addr, &(con[i].addr), sizeof(struct sockaddr_in)))
+        {
+            pos = i;
+            break;
+        }
+    }
+    if (-1 == pos && empty != -1)
+    {
+        con[empty].free = 0;
+        con[empty].chunkNo = 0;
+        con[empty].addr = addr;
+        pos = empty;
+    }
+    return pos;
+}
+
+void doServer(int fd)
+{
+    struct sockaddr_in addr;
+    struct connections con[MAXADDR];
+    char buf[MAXBUF + 1];
+    for (int i = 0; i < MAXADDR; i++)
+        con[i].free = 1;
+
+    while (1)
+    {
+        socklen_t size = sizeof(addr);
+        int receivedBytes;
+        if ((receivedBytes = TEMP_FAILURE_RETRY(recvfrom(fd, buf, MAXBUF, 0, (struct sockaddr *)&addr, &size))) < 0)
+            ERR("read:");
+        buf[receivedBytes] = 0;
+        int index = -1;
+
+        if ((index = findIndex(addr, con)) >= 0)
+        {
+            int32_t chunkNo = ntohl(*((int32_t *)buf));
+            if (chunkNo > con[index].chunkNo + 1)
+            {
+                continue;
+            }
+            else if (chunkNo == con[index].chunkNo + 1)
+            {
+                if (ntohl(*(((int32_t *)buf) + 1)))  // last message bit is set
+                {
+                    printf("Last Part %d\n%s\n", chunkNo, buf + 2 * sizeof(int32_t));
+                    con[index].free = 1;
+                }
+                else
+                {
+                    printf("Part %d\n%s\n", chunkNo, buf + 2 * sizeof(int32_t));
+                }
+                con[index].chunkNo++;
+            }
+
+            if (TEMP_FAILURE_RETRY(sendto(fd, buf, MAXBUF, 0, (struct sockaddr *)&addr, size)) < 0)
+            {
+                if (EPIPE == errno)
+                    con[index].free = 1;
+                else
+                    ERR("send:");
+            }
+        }
+    }
+}
+
+void usage(char *name) { fprintf(stderr, "USAGE: %s port\n", name); }
+
+int main(int argc, char **argv)
+{
+    int fd;
+    if (argc != 2)
+    {
+        usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+    if (sethandler(SIG_IGN, SIGPIPE))
+        ERR("Seting SIGPIPE:");
+    fd = bind_inet_socket(atoi(argv[1]), SOCK_DGRAM);
+    doServer(fd);
+    if (TEMP_FAILURE_RETRY(close(fd)) < 0)
+        ERR("close");
+    fprintf(stderr, "Server has terminated.\n");
+    return EXIT_SUCCESS;
+}
+```
+
+
+Solution `l8-1_client.c`:
+
+```c
+#include "l8_common.h"
+
+#define MAXBUF 576
+volatile sig_atomic_t last_signal = 0;
+
+void sigalrm_handler(int sig) { last_signal = sig; }
+
+int make_socket()
+{
+    int sock;
+    sock = socket(PF_INET, SOCK_DGRAM, 0);
+    if (sock < 0)
+        ERR("socket");
+    return sock;
+}
+
+void usage(char *name) { fprintf(stderr, "USAGE: %s domain port file \n", name); }
+
+void sendAndConfirm(int fd, struct sockaddr_in addr, char *sendbuf, char *recvbuf, ssize_t size)
+{
+    struct itimerval ts;
+    if (TEMP_FAILURE_RETRY(sendto(fd, sendbuf, size, 0, (struct sockaddr *)&addr, sizeof(addr))) < 0)
+        ERR("sendto:");
+    memset(&ts, 0, sizeof(struct itimerval));
+    ts.it_value.tv_usec = 500000;
+    setitimer(ITIMER_REAL, &ts, NULL);
+    last_signal = 0;
+    while (recv(fd, recvbuf, size, 0) < 0)
+    {
+        if (EINTR != errno)
+            ERR("recv:");
+        if (SIGALRM == last_signal)
+            break;
+    }
+}
+
+void doClient(int fd, struct sockaddr_in addr, int file)
+{
+    char sendbuf[MAXBUF];
+    char recvbuf[MAXBUF];
+    int offset = 2 * sizeof(int32_t);
+    int32_t chunkNo = 0;
+    ssize_t size;
+    int counter;
+    do
+    {
+        memset(sendbuf, 0, MAXBUF);
+        memset(recvbuf, 0, MAXBUF);
+
+        if ((size = bulk_read(file, sendbuf + offset, MAXBUF - offset)) < 0)
+            ERR("read from file:");
+        *((int32_t *)sendbuf) = htonl(++chunkNo);
+        if (size < MAXBUF - offset)
+        {
+            memset(sendbuf + offset + size, 0, MAXBUF - offset - size);
+            *(((int32_t *)sendbuf) + 1) = htonl(1);
+        }
+        counter = 0;
+
+        do
+        {
+            counter++;
+            sendAndConfirm(fd, addr, sendbuf, recvbuf, MAXBUF);
+        } while (*((int32_t *)recvbuf) != (int32_t)htonl(chunkNo) && counter <= 5);
+
+        if (*((int32_t *)recvbuf) != (int32_t)htonl(chunkNo) && counter > 5)
+            break;
+
+    } while (size == MAXBUF - offset);
+}
+
+int main(int argc, char **argv)
+{
+    int fd, file;
+    struct sockaddr_in addr;
+    if (argc != 4)
+    {
+        usage(argv[0]);
+        return EXIT_FAILURE;
+    }
+    if (sethandler(SIG_IGN, SIGPIPE))
+        ERR("Seting SIGPIPE:");
+    if (sethandler(sigalrm_handler, SIGALRM))
+        ERR("Seting SIGALRM:");
+    if ((file = TEMP_FAILURE_RETRY(open(argv[3], O_RDONLY))) < 0)
+        ERR("open:");
+    fd = make_socket();
+    addr = make_address(argv[1], argv[2]);
+    doClient(fd, addr, file);
+    if (TEMP_FAILURE_RETRY(close(fd)) < 0)
+        ERR("close");
+    if (TEMP_FAILURE_RETRY(close(file)) < 0)
+        ERR("close");
+    return EXIT_SUCCESS;
+}
+```
+
+
+
+There is no connection in UDP protocol, sockets send datagrams "ad hoc". There is no listening socket. Losses, duplicates and reordering of datagrams  are possible!
+
+In this example you will find useful library candidate functions like: make_socket, bind_inet_socket as they have conflicting names with previously recommended functions, you have to rename them.
+
+In this example connection context is more demanding. What constitutes the context here?
+
+**Answer:** The number of packets send of specified file  up to given moment is the context here - in other words struct connections.
+
+
+What data is sent in datagram? What is the purpose of the metadata?</br>
+
+**Answer:** The datagram consists of (1.  32 bit file part number, (2) 32 bit information if this is the last part of the file, (3) the file part.  Metadata helps to maintain the context, keep the track of the file being sent (1.  and end the transmission (2).
+
+
+Why and on what descriptors bulk_read and bulk_write are used? Should we extend this use on all the descriptors in the program?</br>
+
+**Answer:** Mentioned functions are used to restart read and write after interruption on IO. Notice that it is restarting both interruption types: before IO starts (EINTR) and  the interruption in the middle of IO. Those functions are only used on files as datagrams are sent in atomic way (transfer can not be interrupted). In this program signals are handled in code parts that do not operate on files, still due to code portability bulk_ functions are used.
+
+
+Do we expect broken connection in this program? Should we add checks in the code?
+
+**Answer:** We do not have connection to break in UDP.
+
+
+How findIndex works in server code: How addresses are compared? What byte order they are in? What will the function do if the address in new?
+
+**Answer:** Addresses are compared in binary format without conversion to host byte order. We do not need to convert the byte order as we only compare the addresses, we do not display them. If new address is passed to this function it starts a new record for this address in the array (provide there is a space for it).
+
+
+How this program deals with the duplicates of datagrams?
+
+**Answer:** It keeps an array of active connections "struct connections"  with the number of last transferred part. Duplicated parts are not processed.
+
+
+How this program deals with the reordered datagrams, i.e. when program receives a part that is farther in the file than the next expected?
+
+**Answer:** This can not happen in this program, client will not send such a part without having all the previous parts confirmed by the server.
+
+
+How this program handles lost datagrams?
+
+**Answer:** Client side re-transmission.
+
+
+What will happen if the packet with confirmation from the server to the client gets lost?
+
+**Answer:** The client will assume that the last part sent did not get to the server, it will send it again. Server will get the duplicate of the part that is already stored, it will not process it but it will send another confirmation.
+
+
+What is in the confirmation?
+
+**Answer:** Server sends back exactly the same data as it received.
+
+
+How timeout on the server response is implemented? 
+
+**Answer:** In function sendAndConfirm 0.5s alarm is set (with setitimer) then the program waits for the confirmation on regular not restarted recv call. If signal is received, the recv gets interrupted and the code checks if the timeout triggered.
+
+
+Why the program converts byte order only the part number and the last part marker and not the rest?
+
+**Answer:** Only those two are send in binary integer format, the rest is a file part send as text string that does not require the conversion.
+
+
+Analyze how 5 connection limit works, pay attention how "free" member in the connections structure works, how it is affected by the last part marker in the datagram?]]></text>
+      <code ref="src/l8-1_server.c" lang="c"/>
+      <code ref="src/l8-1_client.c" lang="c"/>
+    </section>
+    <section id="multithreaded-servers" title="Multithreaded Servers" level="2" order="5" parent="">
+      <text><![CDATA[## Multithreaded Servers
+
+During the previous lab, we practiced writing servers using only one thread.
+Such architecture makes a lot of sense when we need to conserve resources and expect a relatively low load.
+
+Often, however, our server must handle a very large number of requests.
+In such a situation, to achieve adequate performance on modern hardware, it is necessary to use multiple threads.
+A typical and natural architecture is one thread receiving messages and passing tasks to worker threads, which process them and send results back to clients.
+On the other hand, the atomicity of operations on datagrams also allows many threads to wait simultaneously for a message on a single socket.
+Of course, in such a situation there is often some additional state associated with it, so synchronization may still be necessary, for example using a mutex.
+
+To write efficient multithreaded programs during the lab, it is worth rereading lab 4 tutorial (synchronization), in particular mutexes, semaphores, and condition variables.
+Review also the typical data structures used for this kind of task, such as a thread pool or a circular buffer.
+If you do not remember these topics well, look through the tutorials for [Lab 3](../../../sop1/lab/l3/) and [Lab 4](../../../sop1/lab/l4), as well as the [slides and lecture programs on synchronization](../../../sop1/wyk/w7).]]></text>
+    </section>
+    <section id="example-tasks" title="Example Tasks" level="2" order="6" parent="">
+      <text><![CDATA[## Example Tasks
+
+Complete the sample exercises. You will have more time and starter code during the lab session, but completing the tasks below on your own means you are well prepared.
+
+- [Task 1](https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example1/) ~100 ~~days~~ minutes
+- [Task 2](https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example2/) ~130 minutes
+- [Task 2 from Lab 7](https://sop.mini.pw.edu.pl/en/sop2/lab/l8/../l7/example2/) ~120 minutes total, stages 4–5 concern Lab 8]]></text>
+    </section>
+    <section id="source-codes-presented-in-this-tutorial" title="Source codes presented in this tutorial" level="2" order="7" parent="">
+      <text><![CDATA[## Source codes presented in this tutorial
+
+
+- [l8-1_client.c](l8-1_client.c)
+- [l8-1_server.c](l8-1_server.c)
+- [l8_common.h](l8_common.h)]]></text>
+    </section>
+    <section id="other-references" title="Other references" level="2" order="8" parent="">
+      <text><![CDATA[## Other references
+
+ - <https://cs341.cs.illinois.edu/coursebook/Networking#layer-4-udp>]]></text>
+    </section>
+  </tutorial>
+  <tasks>
+    <task id="example1" title="UDP Test Task" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example1/">
+      <statement><![CDATA[## The Hundred Days
+
+On March 1, 1815, to the surprise of the world, Napoleon Bonaparte landed with a small detachment at Juan in France.
+Received enthusiastically by the French, he quickly regained power.
+Thus began the period known today as “The Hundred Days”, which ended with the Battle of Waterloo.
+
+In this task, we will simulate delivering reports to Napoleon’s headquarters during the battle.
+Reports are carried by messengers.
+In the chaos of battle, it often happens that a messenger fails to arrive.
+Therefore, we will simulate report delivery using the UDP protocol.
+
+For testing, you can use the `netcat` program with the `-u` flag.]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[The server program takes one argument: the port number.  
+The program waits for datagrams on the given port.
+Messages have the form `<X> <Y> <P> <division name>`.
+`X` and `Y` are map coordinates (natural numbers in the range from 0 to 99), while `<division name>` is text no longer than 128 characters.
+`P` indicates the division’s allegiance and may be `0` (enemy) or `1` (allied).
+The message means that the given division (allied or enemy) has moved to the given position.
+After receiving a datagram, parse the message and print to the terminal a message of the form `<our/enemy> division <division name> was seen at position <X>:<Y>`.
+If the message is malformed, print an error message, but do not terminate the program.]]></stage>
+        <stage n="2"><![CDATA[In such a fierce battle, there is considerable confusion even within headquarters itself.
+Incoming messengers throw reports onto a stack by the entrance, from where they are picked up by four adjutants, who use them to update the headquarters maps.
+Implement a thread pool of adjutants.
+After receiving a message, the server adds it to the stack (of size `STACK_SIZE` equal to 16).
+The adjutant threads wait for a new message — the one that receives it performs the parsing and prints the message as in the first stage.
+Use a mutex for synchronization (to protect the stack) and a semaphore or condition variable (for the pointer to the top of the stack).]]></stage>
+        <stage n="3"><![CDATA[Add updates to the headquarters maps.
+Create a shared array of division names among the threads, of size `DIVISION_NAMES_SIZE` equal to 128.
+After receiving a new report, an adjutant works on it (that is, sleeps for 10 ms).
+Then they check whether the division name is already in the array.
+If not, they append it to the end (remember synchronization!).
+Add a shared headquarters map — a two-dimensional array of size `100`x`100`, initially filled with `-1`.
+The adjutant updates the division’s position on the map — that is, they look up its number, set its previous field to `-1`, and then write the division number (its index in the division names array) to the coordinates from the message.
+To ensure synchronization, add one mutex per map row.]]></stage>
+        <stage n="4"><![CDATA[Add Napoleon’s thread.
+Remember the addresses from which the last report for a given division arrived.
+Every 30 ms, the Emperor of the French prints the state of the map.
+Then he chooses a random allied division and sends it an order of the form `<X> <Y> <P> <division name>`.]]></stage>
+      </stages>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+    <task id="example2" title="UDP Test Task" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example2/">
+      <statement><![CDATA[## L8: Cluster Computing
+
+The dean of the MiNI Faculty has some good news: thanks to the high
+course evaluation response rate, the faculty received a grant and was
+able to buy new computers for the EDEN computing cluster. Faculty
+members and PhD students are eager to use the new machines for advanced
+computations, such as estimating the value of π. However, the new
+hardware still needs a system for user access and job scheduling. Since
+the entire grant has already been spent on the machines themselves, the
+dean decided that the system will be implemented by students as part of
+the Operating Systems course.
+
+snippet with starting definitions `sop-eden-init.c`:
+
+```c
+#define MSG_MAX 64
+#define USERS 10
+#define THREADS 8
+#define LOGIN_LEN 16
+#define COMMAND_LEN 8
+#define COMMANDS_NUM 6
+
+static char *LOGINS[USERS] = {"kaczmarskik", "jelowickif", "hermant",  "turs",     "krasowskip",
+                              "larysaz",     "zygulas",    "homendaw", "galazkap", "jastrzebskaaaaaa"};
+static char *COMMANDS[COMMANDS_NUM] = {"RUN", "EXIT", "PAUSE", "COMPUTE", "LIST", "GATHER"};
+```
+
+
+[bash script for testing solutions](sop-eden-test.sh)]]></statement>
+      <stages>
+        <stage n="1"><![CDATA[Implement a UDP server that accepts messages in the following format:]]></stage>
+        <stage n="2"><![CDATA[16 bytes containing the login (padded with zeros if needed) --- one
+       of the logins listed in the `LOGINS` array,]]></stage>
+        <stage n="3"><![CDATA[8 bytes containing the command (padded with zeros if needed) ---
+       `RUN`, `EXIT`, `PAUSE`, `COMPUTE`, `LIST`, or `GATHER`,]]></stage>
+        <stage n="4"><![CDATA[optional command parameters.
+   
+   For the `COMPUTE` command, the parameters consist of a non-empty
+   sequence of pairs of 4-byte unsigned integers (`uint32_t`). The other
+   commands do not take any additional parameters. All numbers are encoded
+   in network byte order.
+   
+   A message may be at most `MSG_MAX` bytes long. The program should listen
+   on the port given as its first command-line argument:
+   
+           ./sop-eden <port>
+   
+   If a malformed message is received, print a descriptive error message to
+   the terminal, for example: `error: unknown user <login>`,
+   `error: wrong message length <length>`, or
+   `error: unknown command <command>`.
+   
+   If a valid message is received, print it together with its parameters to
+   the terminal in the following format: `<user>: <command> <parameters>`.
+   
+   After receiving a valid `EXIT` command, the program should terminate
+   cleanly.]]></stage>
+        <stage n="5"><![CDATA[The `COMPUTE` command requests new jobs for estimating the value of
+   π, using the function
+   `double compute_pi(const int count, const int* seed)` provided in the
+   starter code. For each pair of numbers in the message, create a new job.
+   The first number is the sample count and must not exceed 10 million.
+   Make sure to check this limit; if it is exceeded, ignore that job and
+   print an error message. The second number is the seed for the random
+   number generator.
+   
+   Add each job to the job queue. The queue should support non-blocking
+   insertion of any number of jobs in constant time, as well as
+   constant-time removal (*hint:* a linked list satisfies these
+   requirements).
+   
+   When the server receives the `LIST` command, it should send back all
+   jobs currently in the queue that belong to the given user. If they do
+   not fit into a single message (subject to the `MSG_MAX` limit), send
+   them in multiple consecutive messages. Responses should be sent to the
+   port number one greater than the sender's port --- for example, if the
+   command was sent from port `8000`, the response should be sent to port
+   `8001`.
+   
+   For each user, keep track of their current approximation of π.]]></stage>
+        <stage n="6"><![CDATA[Implement a thread pool consisting of `THREADS` worker threads for
+   computing π. Each worker should take a job from the front of the
+   queue (with proper synchronization) and process at most 1000 samples. If
+   the job still has samples remaining afterward, put it back at the end of
+   the queue with the remaining sample count updated accordingly.
+   
+   The newly computed result should then be combined with that user's
+   current approximation using a properly weighted average.
+   
+   When the server receives the `GATHER` command, it should send back the
+   user's current approximation of π as a text message formatted with
+   12 digits after the decimal point.]]></stage>
+        <stage n="7"><![CDATA[When the server receives the `PAUSE` command, the thread pool should
+   stop processing jobs belonging to that user until a `RUN` command is
+   received.
+   
+   If a `PAUSE` command is received for a user who is already paused, or a
+   `RUN` command is received for a user who is not paused, print the
+   message `<username>: already paused/running` to the terminal and also
+   send it back in the response.
+   
+   Note: if all users are paused, the program must not fall back to busy
+   polling.
+
+[Example solution of the first stage](sop-eden.c)]]></stage>
+      </stages>
+      <solution ref="src/sop-eden.c"/>
+      <attachments/>
+      <notes><![CDATA[]]></notes>
+    </task>
+  </tasks>
+  <sources>
+    <file ref="src/sop-eden-init.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example2/sop-eden-init.c"/>
+    <file ref="src/sop-eden-test.sh" lang="bash" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example2/sop-eden-test.sh"/>
+    <file ref="src/sop-eden.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example2/sop-eden.c"/>
+    <file ref="src/l8-1_client.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/l8-1_client.c"/>
+    <file ref="src/l8-1_server.c" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/l8-1_server.c"/>
+    <file ref="src/l8_common.h" lang="c" source_url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/l8_common.h"/>
+  </sources>
+  <references>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example1/" title="Task 1"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/example2/" title="Task 2"/>
+    <ref url="https://sop.mini.pw.edu.pl/en/sop2/lab/l8/../l7/example2/" title="Task 2 from Lab 7"/>
+  </references>
+  <metadata/>
+</lab>

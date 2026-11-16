@@ -1,0 +1,22 @@
+{
+  "lab_id": "sop2/netcat",
+  "course": "sop2",
+  "slug": "netcat",
+  "generated_at": "2026-09-22T09:14:50.728182",
+  "sources": [],
+  "slides": [
+    "sop2_networks__Inet_1en_5.pdf",
+    "sop2_networks__Inet_1en_5.txt",
+    "sop2_networks__index.md",
+    "sop2_networks__slides.md",
+    "sop2_sockets__Inet_2en_9.pdf",
+    "sop2_sockets__Inet_2en_9.txt",
+    "sop2_sockets__index.md",
+    "sop2_sockets__slides.md"
+  ],
+  "extra": [
+    "lecture_5.pdf",
+    "lecture_5.txt"
+  ],
+  "src": []
+}

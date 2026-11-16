@@ -9,3 +9,12 @@ htmlcov/
 .idea/
 .DS_Store
 .env
+data/*
+!data/raw/
+data/raw/**/*.pdf
+data/raw/**/slides/
+*.pdf
+.vercel
+.env*
+.env.*
+_uv/

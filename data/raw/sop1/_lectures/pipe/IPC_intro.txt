@@ -1,0 +1,83 @@
+--- page 1 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the 
+textbook „Applied Operating Systems Concepts”
+1
+L.J. Opalski, slides for “Operating Systems 2” course
+Interprocess communication (IPC).
+An introduction
+Last modified: 18.02.2019
+
+--- page 2 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the 
+textbook „Applied Operating Systems Concepts”
+2
+L.J. Opalski, slides for “Operating Systems 2” course
+Cooperating processes
+▪Processes within a system may be independent or cooperating
+▪Cooperating process can affect or be affected by other processes, 
+including sharing data
+▪Reasons for cooperating processes:
+▪Information sharing
+▪Computation speedup
+▪Modularity
+▪Convenience
+▪Cooperating processes need interprocess communication (IPC)
+▪Two fundamental models of IPC
+▪Shared memory
+▪Message passing
+
+--- page 3 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the 
+textbook „Applied Operating Systems Concepts”
+3
+L.J. Opalski, slides for “Operating Systems 2” course
+Fundamental IPC models
+(a) message passing.  (b) shared memory.
+
+--- page 4 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the 
+textbook „Applied Operating Systems Concepts”
+4
+L.J. Opalski, slides for “Operating Systems 2” course
+Features of fundamental IPC models
+▪Shared memory 
++ the communication is under control of the users processes not the 
+operating system – once the system created shared access to a 
+memory region.
++ provides maximum communication speed (if synchronization allows)
+- synchronization of buffer read/write operation is a major issue
+▪Message passing
++ producer and consumer do not share a region of memory (they can 
+even run on different systems)
++ synchronization can be provided by system (blocking 
+implementations of send() / receive() operations)
+- typically implemented with system calls -> overhead of user-kernel-
+user switches
+- data copying makes for a comm. overhead, but can be avoided by 
+copying a reference instead (to a buffer, protected from modification till 
+content is consumed).
+
+--- page 5 ---
+
+Adaptation of Silberschatz, Galvin, Gagne slides for the 
+textbook „Applied Operating Systems Concepts”
+5
+L.J. Opalski, slides for “Operating Systems 2” course
+IPC in the Operating Systems 1/2 courses
+Means of IPC covered in OPS1 course:
+▪Signals
+▪Shared files
+▪Mutexes
+▪Process exit code (functions exit(), wait(),…)
+▪Standard streams of a process (stdin, stdout, stderr)
+OPS2 course:
+▪POSIX pipes and FIFOs
+▪Two sets of interfaces to: shared memory, message queues and 
+semaphores (the older interface of the POSIX Std XSI Option Group, 
+known also as the UNIX System V IPC interface, will be not be used for 
+lab work). 
+▪Network-based sockets interface

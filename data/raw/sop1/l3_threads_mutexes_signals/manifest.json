@@ -1,0 +1,51 @@
+{
+  "lab_id": "sop1/l3",
+  "course": "sop1",
+  "slug": "l3_threads_mutexes_signals",
+  "generated_at": "2026-09-22T09:14:50.656902",
+  "sources": [
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l3/prog17.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l3_threads_mutexes_signals/src/prog17.c",
+      "sha256": "b3e19bcc6aacafdcce4f4345a08c831be9e94da1fc59a0be828c49392321bf6f",
+      "fetched_at": "2026-09-22T09:14:50.651823"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l3/prog18.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l3_threads_mutexes_signals/src/prog18.c",
+      "sha256": "2bf6cc693339693baf2fd9ab2c666291996249def6ec6a7b4e19ef5be8c01012",
+      "fetched_at": "2026-09-22T09:14:50.651930"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l3/prog19.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l3_threads_mutexes_signals/src/prog19.c",
+      "sha256": "697aa948f0ac27236f7610a78e6c8ecc4193496550563247648c4a9d7531debb",
+      "fetched_at": "2026-09-22T09:14:50.652032"
+    },
+    {
+      "url": "https://sop.mini.pw.edu.pl/en/sop1/lab/l3/prog20.c",
+      "local_path": "/Users/glhfsox/diploma/rag-lab-generator/data/raw/sop1/l3_threads_mutexes_signals/src/prog20.c",
+      "sha256": "111355410c3a2546d36e7f578db3b37883a82b1770f4433607196e189107f06f",
+      "fetched_at": "2026-09-22T09:14:50.652132"
+    }
+  ],
+  "slides": [
+    "sop1_w5__POSIX_signals_6.pdf",
+    "sop1_w5__POSIX_signals_6.txt",
+    "sop1_w5__index.md",
+    "sop1_w6__IEEE_Std_1003.1_2008_Thread_cancellation.pdf",
+    "sop1_w6__IEEE_Std_1003.1_2008_Thread_cancellation.txt",
+    "sop1_w6__POSIX_threads_9.pdf",
+    "sop1_w6__POSIX_threads_9.txt",
+    "sop1_w6__Threads_3.pdf",
+    "sop1_w6__Threads_3.txt",
+    "sop1_w6__index.md"
+  ],
+  "extra": [],
+  "src": [
+    "prog17.c",
+    "prog18.c",
+    "prog19.c",
+    "prog20.c"
+  ]
+}

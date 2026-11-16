@@ -1,0 +1,341 @@
+--- page 1 ---
+
+OSI Reference Model
+Marek Kozłowski
+Faculty of Mathematics and Information Sciences
+Warsaw University of Technology
+Warsaw, 2023/2024
+
+--- page 2 ---
+
+Contents
+1 Multilayer OSI Model
+2 Overview of the OSI model Layers
+Physical and Data Link Layers
+Network Layer
+Transport Layer
+Session, Presentation and Application Layers
+3 DoD Model
+
+--- page 3 ---
+
+Outline of the lecture
+1 Multilayer OSI Model
+2 Overview of the OSI model Layers
+Physical and Data Link Layers
+Network Layer
+Transport Layer
+Session, Presentation and Application Layers
+3 DoD Model
+
+--- page 4 ---
+
+Open Systems Interconnection Reference Model
+Developed in 1978 by the International Organization for
+Standardization as the ISO 7498-1 standard.1
+Describes multilayer communication. Defines 7 layers by
+separating tasks involved in communication. The layers are
+defined logically not physically apart from their implementation.
+1http://standards.iso.org/ittf/PubliclyAvailableStandards/s020269_
+ISO_IEC_7498-1_1994(E).zip
+
+--- page 5 ---
+
+Multilayer Model of Communication
+OSI layers are fully autonomous. They require interface
+specifications for communicating with neighbor layers.
+Protocols are assigned to respective OSI layers according to the
+tasks they accomplish irrespective of their physical layout in
+protocol stacks.
+Protocols add (↓) or remove (↑) their headers and should ignore
+the rest of the data. Headers are usually located in front of
+messages.
+
+--- page 6 ---
+
+Multilayer Model of Communication
+
+--- page 7 ---
+
+OSI Model Layers
+Application
+Access to network services for applications
+Presentation
+Data encoding and encryption
+Session
+Dialog control
+Transport
+segments
+Managing connections
+Network
+datagrams
+Internetworking communication
+Data Link
+frames
+Communication within the networks
+Physical
+bits
+Signal transmission
+
+--- page 8 ---
+
+People Don’t Need To See Pamela Anderson
+
+--- page 9 ---
+
+OSI Model Layout
+Application
+A
+Anderson
+Presentation
+P
+Pamela
+Session
+S
+See
+Transport
+T
+To
+Network
+N
+Need
+Data Link
+D
+Don’t
+Physical
+P
+People
+Other useful mnemotechnical rules:
+↑Please Do Not Throw Sausage Pizza Away
+↓Any Person Studying This Needs Desperate Psychotherapy
+
+--- page 10 ---
+
+Outline of the lecture
+1 Multilayer OSI Model
+2 Overview of the OSI model Layers
+Physical and Data Link Layers
+Network Layer
+Transport Layer
+Session, Presentation and Application Layers
+3 DoD Model
+
+--- page 11 ---
+
+Physical Layer
+Driving
+
+--- page 12 ---
+
+Physical Layer
+Allows transmitting a stream of raw bits.
+Specifies:
+transmission media (type, connectors, topology, distances etc.),
+bandwidth,
+signal encoding,
+synchronization.
+Selected devices: Network Interface Cards (NIC), modems, ISDN
+codecs, repeaters, amplifiers, hubs etc.
+
+--- page 13 ---
+
+Baseband Transmission
+uses entire bandwidth
+no frequency division multiplexing
+requires media access synchronization protocols
+digital signaling
+bi-directional transmission
+short distance transmission (with no repeaters)
+cheap to install and maintain
+used in LANs
+
+--- page 14 ---
+
+Broadband Transmission
+multiple signals over different frequencies at a time (frequency
+division multiplexing)
+analog signaling
+unidirectional transmission
+attenuation resistant
+long distance (can be extended further with amplifiers)
+more expensive
+
+--- page 15 ---
+
+Transmission Synchronization
+In the asynchronous mode separate bytes (characters) delimited
+by so-called start bit and end bit are sent.
+In the synchronous mode a sender sends a synchronization
+sequence (a sequence of 0’s and 1’s that synchronizes recipient’s
+clock) followed by a long stream of bytes (a frame).
+Isochronous transmission uses external channels for clock
+synchronization.
+In LANs the synchronous mode is used.
+
+--- page 16 ---
+
+Data Link Layer
+Traffic
+Rules
+
+--- page 17 ---
+
+Data Link Layer
+Specifies internal network communication.
+MAC (Media Access Control) and LLC (Link Layer Control)
+sublayers can be distinguished:
+MAC sublayer introduces physical addressing called also
+hardware or MAC addressing and specifies media access
+techniques (for example: CSMA/CD, token passing),
+LLC layer defines frame transmission control by CRC check,
+frame length control, preamble analysis etc.
+Related terms: frame, MAC address, media access
+synchronization.
+Exemplary devices: NICs, bridges (frame filters), switches
+(multiport bridges).
+
+--- page 18 ---
+
+Network Layer
+Destination
+
+--- page 19 ---
+
+Network Layer
+Defines internetworking communication:
+independent of hardware architecture logical addressing scheme
+(for example IPv4),
+routing (datagram path finding) algorithms.
+Datagram transmission doesn’t have to be reliable.
+Related terms: datagram (packet), logical address, routing.
+Routers operate on the network layer level.
+
+--- page 20 ---
+
+Misc. Network Devices
+1
+1
+2
+3
+hub
+switch,
+bridge
+router
+1
+
+--- page 21 ---
+
+Router vs. Switch
+datagram
+frame
+datagram
+frame1
+frame2
+
+--- page 22 ---
+
+Transport Layer
+Transport
+
+--- page 23 ---
+
+Transport Layer
+Separates lower (data transmission) and upper (logical) layers.
+Specifies data delivery to processes identified by addresses (host
+number : port number).
+Prepares data segments of size acceptable by lower layer
+protocols.
+Provides reliability of connection oriented communication –
+transmission control and data integrity.
+The terms: segment and port refer to the transport layer.
+
+--- page 24 ---
+
+Session Layer
+Specifies:
+dialog type:
+simplex (unidirectional),
+half-duplex (alternate),
+duplex (simultaneous).
+session flow:
+connection establishing: OPEN, EHLO, CONNECT, Guten Morgen!,
+. . . ,
+data exchange: GET, MAIL FROM:, RETR, Two burgers, please!, . . . ,
+connection closing: BYE, QUIT, EXIT, Ciao!, . . . .
+
+--- page 25 ---
+
+Presentation and Application Layers
+Presentation layer is responsible for data conversion:
+encoding (data representation),
+encryption (integrity, confidentiality, non-repudation,
+authentication, and others).
+Application layer interacts with users and visualizes data.
+
+--- page 26 ---
+
+Outline of the lecture
+1 Multilayer OSI Model
+2 Overview of the OSI model Layers
+Physical and Data Link Layers
+Network Layer
+Transport Layer
+Session, Presentation and Application Layers
+3 DoD Model
+
+--- page 27 ---
+
+Department-of-Defence Model
+TCP/IP bases on the Department-of-Defence (DoD) model.
+DoD describes (RFC 1122) only four layers:
+1 Link Layer (sometimes referred as Network Access) is
+responsible for all hardware-dependent tasks,
+2 Internet (or Internetworking) is responsible for transferring data
+between source and destination hosts,
+3 Transport (or Host-to-Host) provides reliable communication
+channels (streams) between processes,
+4 Application (or Process/Application) refers to high-level
+protocols (quite often: transport independent ones).
+
+--- page 28 ---
+
+DoD Communication
+Datagram
+Frame
+Stream
+Segment
+Ethernet
+IP
+TCP
+Data
+
+--- page 29 ---
+
+DoD Layers Compared to OSI Layers
+Application
+Application
+FTP, HTTP, NTP
+Presentation
+Session
+Transport
+Transport
+TCP, UDP
+Network
+Internet
+IP
+Data Link
+Link Layer
+Ethernet
+Physical
+
+--- page 30 ---
+
+DoD vs. OSI
+OSI defines layers logically. Each goal (for example: ciphering) is
+represented by a separate layer.
+DoD defines layers physically, based on the TCP/IP stack layout.
+OSI is an abstract model standardized by ISO with no exact
+implementation.
+DoD is an auxiliary model for an existing protocol stack. There is
+no formal, strict definition of it (RFCs, Cisco and numerous
+authors mention 3-5 layers and use different names).

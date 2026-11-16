@@ -1,3 +1,6 @@
+# data/ is verbatim source material and results/ holds generated eval output: no hook rewrites them.
+exclude: ^(data|results)/
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -7,9 +10,10 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: check-added-large-files
+        args: [--maxkb=2048]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.0
+    rev: v0.16.3
     hooks:
       - id: ruff-format
       - id: ruff
@@ -24,3 +28,4 @@ repos:
     rev: v3.3.8
     hooks:
       - id: pylint
+        args: [--disable=import-error, --rcfile=pyproject.toml]
