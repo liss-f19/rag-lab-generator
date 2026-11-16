@@ -17,4 +17,3 @@ Semaphores are identified by names (`sem`). All functions can be called concurre
 **Write pseudocode for processes P1, P2, and P3.**
 
 ---
-

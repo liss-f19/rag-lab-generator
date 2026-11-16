@@ -36,4 +36,3 @@ After receiving `SIGUSR1`, each child begins to weigh the stone. To weigh the st
 Add correct handling of `SIGINT` in the parent process and in child processes. A child process after receiving `SIGINT` should close all descriptors, send `SIGINT` to the parent, and exit. The parent process sends `SIGINT` to the children and awaits their completion, then exits. Each time any process receives `SIGINT`, print this information on `STDOUT`. Do not do this in the signal handler!
 
 ---
-

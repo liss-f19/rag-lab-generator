@@ -39,4 +39,3 @@ When a worker finishes one job, he sends one byte to the Boss. Set those pipes i
 After receiving `SIGINT`, the Boss counts bytes in each pipe, closes them, and prints a table with the number of jobs completed by each worker. Then it send `SIGINT` to all workers. After receiving `SIGINT` the worker ends its job - you should also handle `SIGPIPE` as it may come first.
 
 ---
-
