@@ -242,7 +242,7 @@ edukacyjne, grafy wiedzy.
 \TOCEntry[1em]{2.2 Document Processing, Metadata, Segmentation, and Indexing}{10}
 \TOCEntry[1em]{2.3 Benchmark Design and Evaluation Measures}{11}
 \TOCEntry[1em]{2.4 Claim Validation, Reproducibility, and Architecture-Selection Criteria}{14}
-\TOCEntry[1em]{2.5 Remarks and Conclusions}{19}
+\TOCEntry[1em]{2.5 Remarks and Conclusions}{17}
 
 \TOCEntry{3 Design and Implementation of the Assignment Generation Application}{20}
 \TOCEntry[1em]{3.1 Requirements, System Architecture, and Operating Systems Case Study}{20}
@@ -373,7 +373,20 @@ BM25 is a widely used lexical ranking function. It estimates relevance from term
 {f(t,d)+k_1\left(1-b+b\frac{|d|}{\operatorname{avgdl}}\right)}.
 \end{equation}
 
-Here, \(f(t,d)\) is the frequency of term \(t\) in document \(d\), \(|d|\) is document length, \(\operatorname{avgdl}\) is average document length, and \(k_1\) and \(b\) control term-frequency saturation and length normalization. Lexical retrieval performs well for exact terminology, identifiers, commands, version numbers, names, and phrases that occur directly in source documents. Its main limitation is vocabulary mismatch.
+Here, \(f(t,d)\) is the frequency of term \(t\) in document \(d\), \(|d|\) is document length, \(\operatorname{avgdl}\) is average document length, and \(k_1\) and \(b\) control term-frequency saturation and length normalization.
+
+The saturation effect in Equation~\eqref{eq:bm25} is illustrated in Figure~\ref{fig:bm25-saturation} using the function \(y=x/(x+k)\). The horizontal axis represents term frequency, \(x=f(t,d)\), while the vertical axis represents the dimensionless saturation factor \(y\), rather than the complete BM25 score. For a fixed document length, the plotted parameter corresponds to \(k=k_1(1-b+b|d|/\operatorname{avgdl})\); for an average-length document, \(k=k_1\). The full contribution of a query term additionally includes the factors \(\operatorname{IDF}(t)\) and \(k_1+1\), which are omitted from this illustration.
+
+The curves show that additional occurrences of a term increase the saturation factor, but with diminishing increments as it approaches one. Smaller values of \(k\) produce faster saturation, whereas larger values allow repeated occurrences to influence the factor over a wider frequency range. These illustrative curves explain the term-frequency component of BM25; they are not experimental retrieval results.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.72\linewidth]{formulas_figures/1_2_BM25.png}
+    \caption{Term-frequency saturation underlying BM25: \(y=x/(x+k)\) for \(k\in\{0.2,1,3,10\}\), where \(x\) is term frequency and \(y\) is the saturation factor.}
+    \label{fig:bm25-saturation}
+\end{figure}
+
+Lexical retrieval performs well for exact terminology, identifiers, commands, version numbers, names, and phrases that occur directly in source documents. Its main limitation is vocabulary mismatch.
 \par\medskip
 \textbf{Dense, Sparse, and Late-Interaction Retrieval}
 
@@ -515,11 +528,246 @@ Source-role and course filters should constrain the eligible evidence independen
 For a controlled architecture comparison, the corpus, metadata policy, embedding model, and retrieved-context budget should remain constant unless a variation is explicitly documented as an experimental factor. Architecture-specific graph construction and other unavoidable differences must also be recorded. This preserves a common evidence foundation while allowing retrieval strategies to differ, so that later evaluation can distinguish retrieval effects from changes in source preparation.
 
 \section{Benchmark Design and Evaluation Measures}
-\textit{To be completed.}
+
+Evaluating a RAG system requires more than assessing whether its output is fluent. A useful evaluation must distinguish retrieval effectiveness, faithful use of evidence, factual correctness, pedagogical suitability, and operational cost. These dimensions can fail independently: a retriever may find appropriate passages that the generator misinterprets, while a correct statement may be produced without support from the permitted corpus. RAGAs illustrates the value of evaluating retrieval context and generated responses separately \cite{Es2024}. For laboratory assignment generation, these general dimensions must also be supplemented with course-specific authority checks and expert assessment.
+
+\par\medskip
+\textbf{Benchmark Construction and Isolation}
+
+A benchmark request should describe an information need rather than reproduce a passage from the corpus. It should record the topic, requested learning outcomes, difficulty, course stage, target competencies, expected duration, and assignment format where relevant. Its reference annotation should identify applicable source excerpts, their authority roles, required evidence elements, and the expected response type. The reference need not prescribe a single assignment wording: several different tasks may satisfy the same pedagogical and evidential constraints.
+
+The evaluation design for this thesis requires a held-out benchmark of at least 60 requests, with at least eight requests in each of the following categories:
+
+\begin{enumerate}
+    \item \textit{Supported single-source requests}, for which one authoritative document provides sufficient evidence.
+    \item \textit{Multi-source requests}, requiring the combination of evidence from several approved documents.
+    \item \textit{Requests requiring supplementary materials}, where permitted background or prerequisite explanations must be combined with primary-course requirements.
+    \item \textit{Unsupported requests}, for which essential evidence is absent from the approved collection.
+    \item \textit{Conflicting-source requests}, requiring recognition of incompatible statements and application of the authority policy or explicit abstention.
+    \item \textit{Difficulty-level or course-stage requests}, testing whether assignments respect differences in assumed knowledge, task complexity, and expected progression.
+\end{enumerate}
+
+These categories describe different properties and may overlap. The benchmark manifest should therefore report both the number of unique requests and category memberships; overlapping labels must not conceal a benchmark containing fewer than 60 distinct requests. Category-specific results should remain visible because a strong average can mask poor conflict handling or excessive abstention.
+
+Reference evidence should be annotated against the frozen corpus, independently of any architecture's retrieved results. For multi-source requests, annotations should distinguish evidence elements that must all be covered from alternative passages that support the same element. Unsupported cases require an explicit account of the missing requirement. Conflict cases should identify the incompatible excerpts and whether the documented authority policy resolves the disagreement. An architecture should not be penalized for retrieving an equally valid alternative merely because the initial annotation listed a different excerpt.
+
+Development requests, selection requests, and held-out test requests have different purposes. Development material supports prompt design and parameter tuning. A separate selection set supports the predefined choice of the default architecture. The held-out benchmark supports final comparative reporting only and must not influence either process. All three should be specified after corpus finalization, with the held-out benchmark, measures, and assessment rubric frozen before implementation or tuning of the compared architectures. Paraphrases and closely related request families should remain in the same partition to reduce leakage. Benchmark annotations are evaluation data and must not enter the searchable course corpus or the generation context.
+
+\par\medskip
+\textbf{Retrieval Relevance and Evidence Coverage}
+
+Let \(R_k(q)\) be the first \(k\) distinct source fragments retrieved for request \(q\), and let \(G(q)\) be its annotated set of relevant fragments. Binary retrieval precision and recall can be expressed as
+
+\begin{equation}
+\label{eq:retrieval-precision-recall}
+\operatorname{Precision@}k(q)=
+\frac{|R_k(q)\cap G(q)|}{|R_k(q)|},
+\qquad
+\operatorname{Recall@}k(q)=
+\frac{|R_k(q)\cap G(q)|}{|G(q)|}.
+\end{equation}
+
+The precision denominator is the number actually returned, which may be smaller than \(k\); the requested cutoff and returned count should both be reported. For an answerable request, returning no fragments yields zero precision and recall under the evaluation convention. Recall is not applicable when no supporting evidence exists in the corpus. Such requests should instead contribute to unsupported-request and abstention measures.
+
+To illustrate Equation~\eqref{eq:retrieval-precision-recall}, consider the request: \textit{Find course material explaining how POSIX thread-pool workers wait for work, receive tasks, and terminate cleanly.} Five sections selected from the course dataset form the complete collection for this example, as listed in Table~\ref{tab:illustrative-evidence-units}. The section boundaries are retained in the accompanying Jupyter notebook so that the example can be reproduced. These are manually selected teaching units, not the output of the application's segmentation or retrieval pipeline. Their grades and ranking are constructed for illustration and are not benchmark annotations or measured retrieval results.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Selected course-material sections and manually assigned relevance grades for the illustrative thread-pool request.}
+    \label{tab:illustrative-evidence-units}
+    \begin{tabular}{p{0.04\linewidth} p{0.72\linewidth} p{0.09\linewidth}}
+        \hline
+        \textbf{ID} & \textbf{Source file and selected section} & \textbf{Grade} \\
+        \hline
+        A & \path{L4_Sample_Task_3_Thread_Pool.md}: Description; worker waiting, dispatch, and cleanup requirements. & 3 \\
+        B & \path{L4_Tutorial_Synchronization.md}: Threads pool -- conditional variables; explanation and implementation. & 3 \\
+        C & \path{L3_Tutorial_Threads.md}: Thread Joining; waiting for thread termination with \texttt{pthread\_join}. & 2 \\
+        D & \path{L4_Sample_Task_1_CSV_Chunks.md}: Task; a related thread-pool application. & 1 \\
+        E & \path{L1_Sample_Task_1_Folder_Size.md}: Description; unrelated filesystem processing. & 0 \\
+        \hline
+    \end{tabular}
+\end{table}
+
+In this example, grade 3 denotes direct evidence, grade 2 supporting evidence, grade 1 related context, and grade 0 irrelevant content. For binary precision and recall, only grades of at least 2 count as relevant, giving \(G(q)=\{A,B,C\}\). This reference set applies only to the five-unit illustrative collection; it does not assert that the full dataset contains no other relevant passages. Suppose that the ranked order is \(E,D,A,C,B\). At cutoff \(k=3\), only \(A\) is relevant among the three returned units, so both precision and recall equal \(1/3\). At \(k=5\), all three relevant units have been found: precision is \(3/5=0.6\), while recall is \(3/3=1\).
+
+Figure~\ref{fig:precision-recall-example} shows the values at every cutoff. The horizontal axis is the retrieval cutoff \(k\), with the newly included evidence unit identified below each position. The vertical axis gives precision and recall on a scale from zero to one. Recall rises as relevant units are encountered, but precision need not rise in general: adding an irrelevant unit increases the denominator without adding a relevant result. The perfect recall at the final cutoff therefore does not imply a precise or well-ordered ranking.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.86\linewidth]{formulas_figures/2_1_Precision_Recall.pdf}
+    \caption{Precision and recall for the constructed ranking \(E,D,A,C,B\), with relevant set \(\{A,B,C\}\). Illustrative calculations based on selected course-material sections, not experimental retrieval results.}
+    \label{fig:precision-recall-example}
+\end{figure}
+
+Rank quality can be measured using normalized discounted cumulative gain (nDCG), which permits graded relevance judgments \cite{Jarvelin2002}. Using exponential gain, the measure is
+
+\begin{equation}
+\label{eq:ndcg}
+\operatorname{DCG@}k(q)=
+\sum_{i=1}^{|R_k(q)|}
+\frac{2^{g_i}-1}{\log_2(i+1)},
+\qquad
+\operatorname{nDCG@}k(q)=
+\frac{\operatorname{DCG@}k(q)}{\operatorname{IDCG@}k(q)}.
+\end{equation}
+
+Here, \(g_i\) is the annotated relevance grade of the fragment at rank \(i\), and \(\operatorname{IDCG@}k\) is the gain of the ideal ranking at the same cutoff. Cases with zero ideal gain should be reported as not applicable. Grades should distinguish direct evidence, useful context, and irrelevant content under a written annotation guide. Authority violations should be measured separately so that a high topical relevance score cannot legitimize an ineligible source.
+
+The same five evidence units demonstrate the effect of ranking order in Equation~\eqref{eq:ndcg}. The ideal order \(A,B,C,D,E\) has grades \((3,3,2,1,0)\), whereas the constructed order \(E,D,A,C,B\) has grades \((0,1,3,2,3)\). Unlike the binary calculation above, discounted gain also gives limited credit to grade-1 contextual material. At cutoff five, the ideal ranking yields \(\operatorname{IDCG@}5\approx13.3472\), while the alternative yields \(\operatorname{DCG@}5\approx8.1309\). Its normalized score is consequently \(\operatorname{nDCG@}5\approx0.6092\), compared with \(1\) for the ideal ranking.
+
+Figure~\ref{fig:ndcg-example} compares each position's discounted contribution in the two rankings. The horizontal axes identify rank \(i\), evidence unit, and relevance grade \(g_i\); the shared vertical axis shows \((2^{g_i}-1)/\log_2(i+1)\), not cumulative DCG or nDCG. Summing the bar heights produces DCG, and dividing by the ideal sum produces nDCG. Although both rankings contain exactly the same evidence and have identical precision and recall at cutoff five, the alternative receives a lower nDCG because highly relevant units occur later. The figure therefore illustrates why set-based retrieval measures should be accompanied by a rank-sensitive measure.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{formulas_figures/2_2_nDCG.pdf}
+    \caption{Discounted gains for ideal and constructed rankings of the same evidence units. Grades are manually assigned for illustration; neither ranking represents an experimental retrieval run.}
+    \label{fig:ndcg-example}
+\end{figure}
+
+Fragment recall alone does not measure whether all necessary conditions have been retrieved. If \(H(q)\) is the set of required evidence elements, evidence coverage can be defined as
+
+\begin{equation}
+\label{eq:evidence-coverage}
+\operatorname{Coverage}(q)=
+\frac{|\{h\in H(q): h\text{ is supported by eligible retrieved evidence}\}|}
+{|H(q)|}.
+\end{equation}
+
+For example, separate elements may concern an allowed tool, a required technical property, and an assessment constraint. Repeated overlapping chunks must not count as additional covered elements. Requests without required positive evidence need separate missing-evidence or conflict-detection scores rather than an artificial coverage value.
+
+Retrieval measures should be computed both for candidate results and for the final context supplied to generation. Relevant evidence may be retrieved but lost during reranking, deduplication, or context truncation. For graph-based architectures, nodes, relations, and summaries should be mapped to their underlying source excerpts before source-level comparison. A shared context-token budget provides an additional comparison that is less sensitive than a fixed fragment count to differences in retrieval-unit size.
+
+\par\medskip
+\textbf{Grounding, Citation Correctness, and Output Quality}
+
+Citation evaluation must distinguish a resolvable reference from evidence that actually supports the associated statement. ALCE evaluates generated text along separate correctness and citation-quality dimensions \cite{Gao2023}. In the present setting, an evidence link is correct only when the cited excerpt is retrievable, supports the linked claim in its stated scope, and has the authority required for that use. Citation correctness is the proportion of evaluated claim-to-excerpt links meeting these conditions. Resolvability and semantic support should also be reported separately to distinguish storage errors from reasoning errors.
+
+Claim-level evidence coverage is complementary: it is the proportion of substantive claims with a sufficient, authority-compliant evidence set. For mandatory requirements, coverage must be calculated separately and must require primary-source support. Multiple citations may jointly establish a claim, but unrelated citations cannot compensate for a missing premise. Adding references indiscriminately should therefore not improve the score.
+
+Let \(C\) be the set of substantive technical claims and mandatory requirements in an evaluated output, and \(C_u\) the subset annotated as unsupported. The unsupported-claim rate is
+
+\begin{equation}
+\label{eq:unsupported-claim-rate}
+\operatorname{UCR}=\frac{|C_u|}{|C|}.
+\end{equation}
+
+Contradicted claims and source-authority violations should be reported as separate rates, together with the overall proportion failing any grounding requirement. A factually plausible but uncited claim remains unsupported for evidence-grounding purposes. Conversely, faithfully reproducing an erroneous source does not establish factual correctness; expert review should distinguish source defects from generation errors.
+
+Output-schema compliance measures whether the response satisfies its declared structure. A complete assignment must include a title, prerequisites, objectives, environment and tools, tasks, submission requirements, an assessment rubric, and source evidence. A valid structured abstention is a different response type: it can satisfy its own schema but must not count as a completed assignment. Request-level reporting should include completion on answerable requests, appropriate abstention on unanswerable requests, unnecessary abstention, and unsafe completion despite missing or contradictory evidence. Claim-based ratios are not applicable to an output containing no evaluable claims, rather than automatically perfect.
+
+\par\medskip
+\textbf{Expert Assessment and Operational Measures}
+
+Educational usefulness cannot be inferred from retrieval scores alone. A predefined expert rubric should assess factual correctness, alignment between requested learning outcomes and observable tasks, suitability for the course stage, clarity, feasibility within the requested duration, and consistency between tasks and assessment criteria. Outcome alignment requires more than repeating outcome labels: the activities and submitted artifacts must demonstrate the intended competencies. Expected duration should be treated as an expert estimate unless student completion times are actually measured.
+
+Each rubric dimension needs explicit ordinal anchors, ranging from unacceptable or substantially incorrect to usable with minor or no revision. Scores should be retained by dimension rather than reduced immediately to one average. Outputs should be presented in randomized order with architecture identities hidden where practical. Independent ratings, an agreement measure appropriate to the rating scale, and a documented adjudication procedure make disagreement visible. Automated model-based judgments may assist screening, but they should not replace the human reference assessment or be treated as independent proof of correctness.
+
+Operational evaluation should report end-to-end latency and its retrieval, generation, and validation components; indexing time; persistent storage use; input and output token usage; and estimated inference cost. Graph extraction and summary generation belong to indexing cost, while query-time graph processing belongs to request cost. Embedding, generation, validation, retries, and any repair calls should be included rather than reporting only the final successful generation.
+
+Latency distributions should include a typical value and a tail percentile, with cold-start and warm-cache conditions distinguished. Storage measurements should separate source files, extracted text, embeddings, and architecture-specific structures. Estimated provider cost should use recorded token counts and a dated price schedule; local processing costs and assumptions should be stated separately. Reporting cost per attempted request as well as per accepted assignment prevents an architecture with many failures from appearing artificially economical.
+
+Repeated runs help characterize generation variability. Comparisons should pair results by request, retain unsuccessful runs, and report uncertainty rather than only point estimates. Confidence intervals can be estimated by resampling requests, keeping repetitions of the same request together. Small category sizes limit strong statistical conclusions, and evidence from one course cannot establish general effectiveness across institutions or disciplines.
+
 \section{Claim Validation, Reproducibility, and Architecture-Selection Criteria}
-\textit{To be completed.}
+
+Validation is a controlled decision about whether an output may be presented as complete, not a guarantee that every educational judgment is correct. Its purpose is to detect structural errors, broken references, unsupported requirements, contradictions, and violations of the source policy before instructor review. Retrieval, generation, and validation should remain separately observable so that an improvement in the final output can be attributed to the appropriate stage.
+
+\par\medskip
+\textbf{Claims and Validation Stages}
+
+A claim is an independently assessable statement or requirement. A sentence may contain several claims: specifying a tool, a version, and a required operation introduces distinct conditions that may have different evidential support. Claim extraction should preserve these conditions, negation, modality, and the distinction between mandatory and optional content. Procedural requirements also require scrutiny even when phrased as instructions rather than factual assertions.
+
+Each claim record should identify its assignment section, text, mandatory or optional role, linked source excerpts, and validation outcome. The evidence record should retain document and fragment identifiers, version, location, knowledge-base role, and the exact excerpt used. A generated explanation of why evidence is relevant is useful for inspection but cannot replace that evidence.
+
+A staged validator should distinguish the following checks:
+
+\begin{enumerate}
+    \item \textit{Structural validation}: check the response type, required fields, field types, and mandatory sections.
+    \item \textit{Reference validation}: resolve document and fragment identifiers against the recorded corpus snapshot and verify that quoted text corresponds to stored evidence.
+    \item \textit{Authority validation}: check course applicability, version, source role, and whether primary evidence supports every mandatory requirement.
+    \item \textit{Semantic validation}: determine whether the linked evidence supports, contradicts, or fails to establish each claim, including its conditions and qualifications.
+    \item \textit{Completeness and consistency validation}: check that mandatory requirements are covered and that tasks, prerequisites, tools, submission instructions, and assessment criteria do not conflict.
+\end{enumerate}
+
+Deterministic checks are appropriate for structure and identifier resolution. Semantic checks may use natural-language inference, a language-model evaluator, or human assessment, but their errors must be measured. Similarity scores are not entailment judgments. A source describing a technique as an optional example does not support a claim that the technique is compulsory.
+
+For semantic classification, \textit{supported} means that the inspected evidence establishes the complete claim in its applicable context; \textit{contradicted} means that applicable evidence explicitly conflicts with it; and \textit{unsupported} means that neither sufficient support nor an explicit contradiction is available. Partial support is insufficient for the complete claim and should trigger decomposition or an unsupported label. These semantic labels should remain distinct from authority outcomes: supplementary material may semantically support a statement while remaining ineligible to authorize a mandatory course requirement.
+
+Conflict resolution must precede acceptance. A superseded version can be disregarded only when the documented policy establishes which version applies. If equally applicable authoritative passages remain incompatible, the conflict must be recorded and the affected requirement must not pass validation, even if one passage supports it. Validation should inspect relevant counterevidence where available rather than considering only the citations chosen by the generator. Nevertheless, failure to retrieve a contradiction is not evidence that none exists; the corpus-level reference assessment provides an independent check.
+
+\par\medskip
+\textbf{Abstention, Repair, and Editing}
+
+When mandatory evidence is missing, unresolved contradictions remain, or required checks fail, the application should return a structured non-completion response. It should identify the affected requirement, the failure category, available source references, and the information or instructor decision needed to proceed. Processing failures, such as a model-service timeout, must be distinguishable from a justified conclusion that the corpus lacks evidence.
+
+Repair or additional retrieval may be attempted only under a documented, bounded policy shared across the compared architectures. Each attempt must be logged and included in latency, token, and cost measurements. A repair that merely removes a requested learning outcome or weakens a mandatory requirement does not satisfy the original request. If the required scope cannot be supported, the response must remain incomplete rather than silently presenting a different assignment.
+
+Editing and section-level regeneration can invalidate earlier evidence decisions. Changed claims require renewed reference, authority, and semantic checks, while cross-section consistency must be reconsidered when a task, tool, or assessment requirement changes. Historical validation results should remain attached to the output version actually checked, not be inherited automatically by an edited assignment.
+
+\par\medskip
+\textbf{Evaluating the Validator}
+
+The validator must be evaluated against manual annotations rather than its own labels. The planned assessment requires at least 60 generated claims, covering supported, contradicted, and unsupported cases across architectures and request categories. The sampling procedure, class counts, and selection of outputs must be recorded. If rare error classes are deliberately oversampled, the resulting sample estimates must not be presented as the natural error prevalence of all generated assignments.
+
+Annotators should use the claim, linked excerpts, applicable authority policy, and relevant corpus context, without seeing the validator's prediction. Independent annotation followed by adjudication produces a reference label and makes ambiguity explicit. Claims from the same assignment are related observations; partitioning or uncertainty estimation should preserve that grouping.
+
+For each class \(c\), treated as positive against the other two classes, precision, recall, and F1-score are
+
+\begin{equation}
+\label{eq:claim-classification}
+P_c=\frac{TP_c}{TP_c+FP_c},
+\qquad
+R_c=\frac{TP_c}{TP_c+FN_c},
+\qquad
+F1_c=\frac{2P_cR_c}{P_c+R_c}.
+\end{equation}
+
+Here, \(TP_c\), \(FP_c\), and \(FN_c\) denote true positives, false positives, and false negatives for class \(c\). Per-class counts, a three-class confusion matrix, and macro-averaged F1 should accompany the scores. Undefined ratios must be identified explicitly; if a zero convention is used for aggregation, it must be stated. A class absent from the manual sample cannot support a meaningful recall estimate.
+
+False acceptance deserves particular attention: a contradicted or unsupported claim classified as supported may reach the instructor as apparently verified. Conversely, rejecting supported claims reduces completion and can make a conservative validator unusable. Both types of error matter. Authority-check failures and unresolved conflicts should be evaluated in addition to the three-way semantic classifier rather than hidden inside its scores.
+
+Unsupported-claim rates should be reported before validation and in the outputs accepted after validation, using independent reference judgments. These populations have different denominators, which must be shown together with rejected-output and completion rates. Rejecting every output would eliminate unsafe presentations but would not produce a useful application. Where repair changes claims, paired output versions should be retained so that rejection, correction, and claim removal can be distinguished.
+
+\par\medskip
+\textbf{Reproducible Experiment Records}
+
+Reproducibility requires the ability to reconstruct the corpus, configuration, and execution procedure. It does not necessarily mean obtaining byte-identical text from a nondeterministic model service. Each run should record:
+
+\begin{itemize}
+    \item corpus and benchmark versions, source-file checksums, and partition identifiers;
+    \item extraction, normalization, segmentation, metadata, and index settings;
+    \item architecture and implementation versions, retrieval parameters, filters, reranking settings, and context limits;
+    \item embedding, generation, and validation model identifiers, available version information, decoding settings, seeds where supported, and prompt and schema versions;
+    \item retrieved rankings, the final context, generated output versions, claim-to-evidence links, validation decisions, repairs, failures, and retry counts;
+    \item software dependencies, hardware or service environment, cache conditions, execution times, token counts, and cost assumptions.
+\end{itemize}
+
+Graph-based experiments additionally require extraction prompts, entity-resolution settings, relation definitions, graph-construction parameters, community settings where applicable, and provenance for derived summaries. Index snapshots or deterministic rebuild instructions should make clear which derived structures were used. A shared interface does not by itself establish a fair comparison if different architectures receive different evidence budgets or unreported generation stages.
+
+Raw observations should be preserved separately from aggregated tables and expert judgments. Aggregation scripts should document exclusions, missing values, averaging units, and treatment of unsuccessful runs. Credentials must not enter experiment records, and access to source excerpts should respect the permissions under which the corpus was collected. Where redistribution is restricted, reproducibility may require manifests and authorized reconstruction instructions rather than public release of full documents.
+
+\par\medskip
+\textbf{Architecture Selection without Test Leakage}
+
+The default architecture should be chosen through a predefined rule applied to the separate selection set, not to the held-out benchmark. Thresholds, metric priorities, tie-breaking rules, and any allowed quality tolerance must be recorded before selection results are inspected. The held-out evaluation then characterizes all frozen architectures and the already selected default. It must not be used retrospectively to change that choice. If it reveals unacceptable behavior, deployment should be withheld and further development evaluated under a newly defined holdout.
+
+A suitable decision process first applies eligibility gates for mandatory source-policy compliance, evidence grounding, factual correctness, and learning-outcome alignment. Acceptance thresholds for these measures and minimum useful completion must be specified in the experimental protocol; no numerical threshold is implied by the general principles in this chapter. An architecture cannot compensate for unsupported mandatory requirements by being faster or cheaper. If no candidate meets the gates, the correct decision is that no architecture is yet acceptable.
+
+Among eligible candidates, a lexicographic rule can prioritize authority-compliant grounding, then factual correctness, then learning-outcome alignment. Comparisons should use predefined practical tolerances and uncertainty estimates rather than treating negligible score differences as decisive. Educational usefulness can discriminate between candidates of comparable core quality; operational cost, latency, indexing burden, and storage then provide tie-breakers. This approach makes priorities explicit and avoids an arbitrary weighted average in which cost can cancel a serious grounding defect.
+
+Graph-specific features require controlled investigation. Relation type, relation weight, and centrality can suggest task organization, but graph centrality is not equivalent to pedagogical importance or source authority. A central concept may be background knowledge rather than an intended learning outcome. Any graph-informed choice of core tasks therefore still requires primary-course evidence and outcome alignment. Ablations on development or selection data can compare configurations with and without these signals while holding other settings constant; held-out ablations, if reported, must be frozen in advance and cannot guide selection.
+
+The final report should disclose the decision rule, the selection-set results to which it was applied, the chosen configuration, and the separate held-out findings. This preserves the distinction between choosing a system and estimating how well the chosen system generalizes to unseen requests.
+
 \section{Remarks and Conclusions}
-\textit{To be completed.}
+
+Corpus preparation and evaluation jointly determine what conclusions can be drawn about a RAG application. A controlled collection establishes the evidence boundary, while explicit authority rules distinguish information that can explain a concept from information that can authorize a mandatory course requirement. Extraction, metadata, segmentation, and indexing must preserve this distinction and retain inspectable links to original excerpts, including when graph structures or summaries are used for retrieval.
+
+A credible evaluation separates retrieval relevance, evidence coverage, citation correctness, factual correctness, pedagogical alignment, and operational performance. Supported, unsupported, and conflicting requests require different expected behaviors; a complete assignment is not always the correct response. Completion and abstention must therefore be reported alongside claim-level quality so that neither unsupported generation nor indiscriminate rejection appears successful.
+
+Validation provides a further safeguard but must itself be assessed against independent manual judgments. Structural compliance and resolvable citations are necessary, not sufficient, conditions for a grounded assignment. Semantic support, primary-source authority, and consistency across assignment sections remain essential, and instructor review is still required for educational suitability.
+
+Finally, reproducible configurations, preserved run records, and strict separation of development, selection, and held-out evaluation reduce the risk of misleading comparisons. Architecture selection should prioritize grounding, factual correctness, and learning-outcome alignment before operational convenience. These principles provide the methodological basis for the application design in Chapter~3 and the experimental evaluation in Chapter~4; they do not constitute experimental results or establish that any architecture is already suitable for deployment.
 
 \chapter{Design and Implementation of the Assignment Generation Application}
 \section{Requirements, System Architecture, and Operating Systems Case Study}

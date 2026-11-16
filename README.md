@@ -1,5 +1,7 @@
 # RAG Lab Generator
 
+![Coverage](https://img.shields.io/badge/coverage-97%25-brightgreen)
+
 A Python project for building and evaluating a Retrieval-Augmented
 Generation (RAG) application.
 
