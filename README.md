@@ -3,9 +3,12 @@
 A Python project for building and evaluating a Retrieval-Augmented
 Generation (RAG) application.
 
-> **Current status:** This repository contains the project
-> infrastructure and development setup. The RAG implementation itself is
-> intentionally not included yet.
+> **Current status (Stage 3):** the ingestion and indexing core is
+> implemented: document upload (PDF, HTML, TXT, Markdown), text extraction,
+> structure-aware chunking, PostgreSQL storage, embeddings, a Chroma vector
+> index, background jobs on Redis/RQ, and baseline vector retrieval with the
+> source-authority policy. Assignment generation, evidence validation, the
+> other retrieval architectures, and the web client follow in later stages.
 
 ## Requirements
 
@@ -100,14 +103,20 @@ cp .env.template .env
 
 Edit `.env` and add the required values.
 
-Example:
+Required values:
 
-``` env
-OPENAI_API_KEY=
-OPENAI_MODEL=
-OPENAI_EMBEDDING_MODEL=
-CHROMA_PERSIST_DIRECTORY=./data/chroma
-```
+| Variable | Purpose |
+|---|---|
+| `TOKEN_SIGNING_KEY` | Signs bearer tokens; at least 32 random characters |
+| `POSTGRES_PASSWORD` | Password of the PostgreSQL service in Docker Compose |
+| `EMBEDDING_PROVIDER` | `openai` (semantic, needs `OPENAI_API_KEY`) or `hashing` (offline, deterministic, lexical only) |
+| `OPENAI_API_KEY` | Needed only with `EMBEDDING_PROVIDER=openai` |
+
+Optional settings (`DATABASE_URL`, `REDIS_URL`, `QUEUE_BACKEND`,
+`FILE_STORAGE_DIR`, `CHROMA_PERSIST_DIRECTORY`, `MAX_UPLOAD_BYTES`,
+`CHUNK_MAX_CHARS`, `CHUNK_OVERLAP_CHARS`) are listed in `.env.template` and in
+`src/rag_lab_generator/config.py`. Course material is sent to the OpenAI API
+only when `EMBEDDING_PROVIDER=openai`.
 
 ### Important
 
@@ -163,11 +172,24 @@ The command should finish with all applicable hooks passing.
 
 ## 6. Run tests
 
-Run the complete test suite:
+Run the unit tests (they use in-memory SQLite and need no services):
 
 ``` bash
 uv run pytest
+uv run pytest --cov            # with the coverage report
 ```
+
+The integration tests run the PostgreSQL migrations, the repositories, the
+RQ worker, and Chroma end to end. They need a **throw-away** PostgreSQL
+database, because they drop and recreate the schema:
+
+``` bash
+TEST_DATABASE_URL=postgresql+psycopg://rag:rag@localhost:5432/rag_test \
+TEST_REDIS_URL=redis://localhost:6379/0 \
+uv run pytest -m integration
+```
+
+Without `TEST_REDIS_URL` an in-process fake Redis is used.
 
 Tests are located under:
 
@@ -223,7 +245,72 @@ The Docker build uses Python 3.12 and `uv`.
 
 ------------------------------------------------------------------------
 
-## 8. Development workflow
+## 8. Run the application
+
+### With Docker Compose
+
+``` bash
+cp .env.template .env      # set TOKEN_SIGNING_KEY, POSTGRES_PASSWORD, embeddings
+docker compose up --build --detach --wait
+```
+
+This starts four services on a private network: `api` (FastAPI on port
+8000, applies the database migrations on start-up), `worker` (RQ worker,
+the only process that opens the Chroma store), `postgres`, and `redis`.
+Uploaded files, the vector index, the database, and the queue are kept in
+named volumes, so they survive restarts.
+
+Create a user and get a bearer token:
+
+``` bash
+docker compose exec api rag-lab-generator create-user \
+    --email you@example.edu --role instructor
+```
+
+The interactive API documentation is at <http://localhost:8000/docs>.
+
+### Without Docker
+
+Set `QUEUE_BACKEND=inline` to run jobs inside the API process (no Redis,
+no worker); PostgreSQL is still required:
+
+``` bash
+uv run rag-lab-generator migrate
+uv run rag-lab-generator create-user --email you@example.edu --role instructor
+uv run rag-lab-generator api            # and, with QUEUE_BACKEND=rq: uv run rag-lab-generator worker
+```
+
+### API overview (`/api/v1`)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/health` | public | Database and queue readiness |
+| POST | `/documents` | instructor, administrator | Upload a source (`multipart/form-data`: `file`, JSON `metadata`); `202` with a job |
+| GET | `/documents` | instructor, administrator | List with filters and pagination |
+| GET | `/documents/{id}` | instructor, administrator | Document, status, and fragment count |
+| PATCH | `/documents/{id}/metadata` | instructor, administrator | Update descriptive metadata |
+| POST | `/courses/{course_id}/index` | instructor, administrator | Re-index all documents of a course; `202` with a job |
+| POST | `/courses/{course_id}/retrieval` | instructor, researcher, administrator | Ranked evidence for a query; `202` with a job |
+| GET | `/jobs/{id}` | job owner, administrator | Job status, result, or structured error |
+| GET | `/jobs/{id}/logs` | job owner, administrator | Execution log of the job |
+
+Errors use one JSON envelope: `{"error": {"code", "message", "details",
+"request_id"}}`.
+
+### End-to-end trace
+
+`scripts/e2e_trace.py` uploads every file in `dataset/` through the API,
+waits for the ingestion jobs, runs sample retrieval queries, and reports
+latencies and the evidence found:
+
+``` bash
+uv run python scripts/e2e_trace.py --base-url http://localhost:8000 \
+    --token <token> --output e2e-trace.json
+```
+
+------------------------------------------------------------------------
+
+## 9. Development workflow
 
 Create a feature branch from the latest `main`:
 
@@ -264,33 +351,17 @@ main
 
 ------------------------------------------------------------------------
 
-## 9. CI/CD
+## 10. CI/CD
 
 Every Pull Request targeting `main` runs the GitHub Actions CI workflow.
 
-The CI pipeline performs:
+The CI workflow has three jobs:
 
-``` text
-Checkout
-   ↓
-Install uv
-   ↓
-Set up Python 3.12
-   ↓
-Install dependencies
-   ↓
-Run pre-commit
-   ↓
-Run pytest
-   ↓
-Build Docker image
-```
-
-The CI job is called:
-
-``` text
-build
-```
+-   `build`: pre-commit, unit tests with coverage, Docker image build
+-   `integration`: integration tests against PostgreSQL 16 and Redis 7
+    service containers
+-   `e2e`: starts the Docker Compose stack, creates a user, runs
+    `scripts/e2e_trace.py`, and uploads the trace as an artifact
 
 A Pull Request cannot be merged into `main` unless the required `build`
 status check passes.
@@ -307,7 +378,7 @@ docker build -t rag-lab-generator .
 
 ------------------------------------------------------------------------
 
-## 10. Branch protection
+## 11. Branch protection
 
 The `main` branch is protected.
 
@@ -336,7 +407,7 @@ build
 
 ------------------------------------------------------------------------
 
-## 11. Pull Request checklist
+## 12. Pull Request checklist
 
 Before opening a Pull Request:
 
@@ -350,42 +421,37 @@ Before opening a Pull Request:
 
 ------------------------------------------------------------------------
 
-## 12. Project structure
+## 13. Project structure
 
-The current infrastructure is organized as:
+The repository is organized as:
 
 ``` text
 rag-lab-generator/
-│
-├── .github/
-│   ├── workflows/
-│   │   └── ci.yml
-│   └── PULL_REQUEST_TEMPLATE/
-│       └── pull_request.md
-│
-├── src/
-│   └── rag_lab_generator/
-│       └── __init__.py
-│
-├── tests/
-│   └── unit/
-│       └── test_smoke.py
-│
-├── .dockerignore
-├── .env.template
-├── .gitignore
-├── .pre-commit-config.yaml
-├── Dockerfile
-├── README.md
-├── pyproject.toml
-└── uv.lock
+├── .github/workflows/ci.yml         CI: build, integration, e2e
+├── dataset/                         OPS course materials (Markdown corpus)
+├── diploma paper/, documentation/   project report and requirements
+├── scripts/e2e_trace.py             end-to-end trace through the API
+├── src/rag_lab_generator/
+│   ├── domain/                      entities, policies, ports (stdlib only)
+│   ├── application/                 use cases: documents, jobs
+│   ├── ingestion/                   extractors, chunking, ingestion service
+│   ├── retrieval/                   vector retrieval strategy and service
+│   ├── generation/                  (next stages)
+│   ├── infrastructure/              PostgreSQL, Chroma, embeddings, RQ, files, tokens
+│   ├── api/                         FastAPI app, routers, schemas, errors
+│   ├── migrations/                  Alembic migrations
+│   ├── container.py                 composition root
+│   ├── worker.py                    RQ worker
+│   └── cli.py                       rag-lab-generator command
+├── tests/unit/, tests/integration/
+├── docker-compose.yml, Dockerfile
+└── pyproject.toml, uv.lock
 ```
 
-The RAG application structure will be added separately.
 
 ------------------------------------------------------------------------
 
-## 13. Dependency management with `uv`
+## 14. Dependency management with `uv`
 
 Add a runtime dependency:
 
@@ -416,7 +482,7 @@ Do not manually edit `uv.lock`.
 
 ------------------------------------------------------------------------
 
-## 14. Useful commands
+## 15. Useful commands
 
 ### Install/sync dependencies
 
@@ -469,7 +535,7 @@ git pull origin main
 
 ------------------------------------------------------------------------
 
-## 15. Troubleshooting
+## 16. Troubleshooting
 
 ### `uv: command not found`
 
@@ -530,7 +596,7 @@ Then commit the updated `uv.lock` together with `pyproject.toml`.
 
 ------------------------------------------------------------------------
 
-## 16. Architecture status
+## 17. Architecture status
 
 The project currently has the infrastructure needed to start RAG
 development:
@@ -559,26 +625,26 @@ Git
       merge main
 ```
 
-The application layer will be introduced later:
+The application pipeline and its status:
 
 ``` text
-Documents
+Documents        implemented   PDF, HTML, TXT, Markdown upload
     ↓
-Ingestion
+Ingestion        implemented   text extraction with section paths and pages
     ↓
-Chunking
+Chunking         implemented   structure-aware fragments
     ↓
-Embeddings
+Embeddings       implemented   OpenAI or offline hashing provider
     ↓
-Vector Store
+Vector Store     implemented   Chroma, one collection per course and model
     ↓
-Retrieval
+Retrieval        baseline      vector strategy with source-authority policy
     ↓
-LLM
+LLM              next stage    assignment generation
     ↓
-RAG Answer
+Validation       next stage    evidence validation
     ↓
-Evaluation
+Evaluation       next stage    architecture comparison
 ```
 
 SonarQube is intentionally not part of this project setup.

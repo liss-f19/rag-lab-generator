@@ -9,3 +9,7 @@ htmlcov/
 .idea/
 .DS_Store
 .env
+
+# Local runtime data (uploads, Chroma) and trace outputs
+data/
+e2e-trace.*

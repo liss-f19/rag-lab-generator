@@ -32,8 +32,119 @@ jobs:
       - name: Run pre-commit
         run: uv run pre-commit run --all-files
 
-      - name: Run tests
-        run: uv run pytest
+      - name: Run unit tests with coverage
+        run: uv run pytest --cov --cov-report=term --cov-report=xml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
 
       - name: Build Docker image
         run: docker build -t rag-lab-generator .
+
+  integration:
+    name: integration (PostgreSQL, Redis)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: rag
+          POSTGRES_PASSWORD: rag
+          POSTGRES_DB: rag_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rag -d rag_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://rag:rag@localhost:5432/rag_test
+      TEST_REDIS_URL: redis://localhost:6379/0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run integration tests
+        run: uv run pytest -m integration
+
+  e2e:
+    name: end-to-end trace (Docker Compose)
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Write .env with throw-away secrets
+        run: |
+          {
+            echo "TOKEN_SIGNING_KEY=$(openssl rand -hex 32)"
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 16)"
+            echo "EMBEDDING_PROVIDER=hashing"
+          } > .env
+
+      - name: Start the stack
+        run: docker compose up --detach --build --wait
+
+      - name: Create a user
+        run: |
+          token=$(docker compose exec -T api rag-lab-generator create-user \
+            --email e2e@example.edu --role instructor 2>/dev/null | tail -n 1 | jq -r .token)
+          echo "::add-mask::$token"
+          echo "E2E_TOKEN=$token" >> "$GITHUB_ENV"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Run the trace
+        run: |
+          uv sync --locked
+          uv run python scripts/e2e_trace.py --output e2e-trace.json | tee e2e-trace.txt
+
+      - name: Upload the trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-trace
+          path: e2e-trace.*
+          if-no-files-found: ignore
+
+      - name: Service logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop the stack
+        if: always()
+        run: docker compose down --volumes

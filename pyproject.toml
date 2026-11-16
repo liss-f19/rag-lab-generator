@@ -1,10 +1,24 @@
 [project]
 name = "rag-lab-generator"
 version = "0.1.0"
-description = "Add your description here"
+description = "RAG web application that generates evidence-grounded laboratory assignments"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "alembic>=1.20.1",
+    "chromadb>=1.5.9",
+    "fastapi>=0.163.1",
+    "openai>=3.51.0",
+    "psycopg[binary]>=3.3.9",
+    "pydantic-settings>=2.16.3",
+    "pyjwt>=2.15.1",
+    "pypdf>=7.1.0",
+    "python-multipart>=0.0.34",
+    "redis>=8.1.0",
+    "rq>=3.0.0",
+    "sqlalchemy>=2.1.8",
+    "uvicorn[standard]>=0.54.0",
+]
 
 [project.scripts]
 rag-lab-generator = "rag_lab_generator:main"
@@ -15,7 +29,9 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "fakeredis>=2.40.0",
     "flake8>=7.3.0",
+    "httpx>=0.28.1",
     "pre-commit>=4.6.2",
     "pylint>=4.0.7",
     "pytest>=9.1.1",
@@ -23,9 +39,36 @@ dev = [
     "ruff>=0.16.3",
 ]
 
+[tool.pylint.main]
+# alembic.op and alembic.context are proxies filled in at run time.
+ignored-modules = ["alembic.op", "alembic.context"]
+
 [tool.pylint.messages_control]
 disable = [
     "missing-module-docstring",
     "missing-function-docstring",
     "missing-class-docstring",
+    # Ports, adapters, and strategies have one operation by design.
+    "too-few-public-methods",
 ]
+
+[tool.pylint.similarities]
+# Response models mirror domain entities field by field.
+min-similarity-lines = 6
+ignore-imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not integration' --strict-markers"
+markers = [
+    "integration: needs PostgreSQL and Redis (DATABASE_URL, REDIS_URL); run with -m integration",
+]
+filterwarnings = ["ignore::DeprecationWarning:chromadb.*"]
+
+[tool.coverage.run]
+source = ["rag_lab_generator"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
