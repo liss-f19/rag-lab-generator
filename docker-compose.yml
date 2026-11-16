@@ -1,0 +1,89 @@
+# Local deployment (Stage 2, Figure "Deployment and network view").
+# Only the API port is published; PostgreSQL and Redis stay on the private
+# network. Secrets come from .env (see .env.template).
+
+name: rag-lab-generator
+
+x-app: &app
+  build: .
+  image: rag-lab-generator:local
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    DATABASE_URL: postgresql+psycopg://rag:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/rag_lab
+    REDIS_URL: redis://redis:6379/0
+    QUEUE_BACKEND: rq
+  networks: [backend]
+  restart: unless-stopped
+
+services:
+  api:
+    <<: *app
+    command: ["sh", "-c", "rag-lab-generator migrate && rag-lab-generator api"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - files:/data/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  worker:
+    <<: *app
+    command: ["rag-lab-generator", "worker"]
+    volumes:
+      - files:/data/files
+      - chroma:/data/chroma
+    depends_on:
+      api:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: rag_lab
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    networks: [backend]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag -d rag_lab"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks: [backend]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  files:
+  chroma:
+  pg-data:
+  redis-data:
+
+networks:
+  backend:

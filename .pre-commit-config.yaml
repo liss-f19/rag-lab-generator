@@ -20,7 +20,13 @@ repos:
     hooks:
       - id: flake8
 
-  - repo: https://github.com/PyCQA/pylint
-    rev: v3.3.8
+  # pylint needs the project's dependencies to resolve imports, so it runs in
+  # the project environment instead of an isolated pre-commit environment.
+  - repo: local
     hooks:
       - id: pylint
+        name: pylint
+        entry: uv run pylint
+        language: system
+        types: [python]
+        require_serial: true
