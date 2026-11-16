@@ -1,0 +1,40 @@
+# L7 Sample Task 1: PID Digit Sum
+
+*Topic: L7 — Sockets and epoll (sample task)*
+
+
+## Goal
+
+Write client server TCP application. Client prints its PID on stdout, connects to the server and sends its PID at a text. Server sends back the sum of digits in the PID as `int16_t`. Client prints the result and exits. Server accepts clients until C-c. On `SIGINT` it exits and prints the highest sum it calculated. Example:
+
+## Example
+
+```
+./server 2000&
+./client localhost 2000
+PID=1244
+SUM=11
+./client localhost 2000
+PID=1245
+SUM=12
+killall -s SIGINT server
+HIGH SUM=12
+```
+
+## Stages
+
+### Stage 1
+
+Server accepts only one connection, reads text data from the client and prints it on the stdout. Client connects and sends text data
+
+### Stage 2
+
+Server accepts many connections, counts the sum of digits and sends the numer (`int16_t`) back to the client, client prints the result
+
+### Stage 3
+
+Server properly handles C-c, prints maximum sum.
+
+### Stage 4
+
+All types of broken connection on the socket are properly checked and handled.
