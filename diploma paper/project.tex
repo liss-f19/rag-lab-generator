@@ -64,7 +64,7 @@
 % -------------------------------------------------
 % Project information
 % -------------------------------------------------
-\newcommand{\ProjectHeading}{Group Project \textendash{} LAB 1, 2}
+\newcommand{\ProjectHeading}{Group Project \textendash{} LAB 1, 2, 3}
 
 \newcommand{\ProjectTitle}{%
 Design and Implementation of a Knowledge-Retrieval-Supported Application\\
@@ -77,8 +77,8 @@ for Creating Laboratory Assignments%
 Dr hab.\ inż.\ Jerzy Balicki, prof.\ PW%
 }
 
-\newcommand{\DocumentVersion}{version 1.1}
-\newcommand{\DocumentDate}{19.10.2026}
+\newcommand{\DocumentVersion}{version 1.4}
+\newcommand{\DocumentDate}{16.11.2026}
 
 % -------------------------------------------------
 % Manual table-of-contents entry
@@ -275,7 +275,8 @@ Dr hab.\ inż.\ Jerzy Balicki, prof.\ PW%
 \TOCEntry{7 Justification of Technology Stack Choice}{\pageref{sec:technology-stack}}
 \TOCEntry{8 API Contracts}{\pageref{sec:api-contracts}}
 \TOCEntry{9 Planned Database Schema (Relational ERD)}{\pageref{sec:database-schema}}
-\TOCEntry{10 Bibliography}{\pageref{sec:bibliography}}
+\TOCEntry{10 Core System Implementation and Progress Report}{\pageref{sec:implementation}}
+\TOCEntry{11 Bibliography}{\pageref{sec:bibliography}}
 
 \clearpage
 
@@ -346,6 +347,11 @@ The outcome will be a documented and deployable web application for instructors,
         1.3 &
         Larisa Salamatova, Stanislaw Konariew &
         API Contracts, Planned Database Schema\\
+        \hline
+        16.11.2026 &
+        1.4 &
+        Stanislaw Konariew &
+        Core System Implementation and Progress Report (Stage 3)\\
         \hline
     \end{tabularx}
     \caption{History of Changes}
@@ -3714,7 +3720,454 @@ CREATE INDEX idx_execution_logs_job_time
 \end{lstlisting}
 
 % =================================================
-% 10 Bibliography
+% 10 Core System Implementation and Progress Report (Stage 3)
+% =================================================
+\clearpage
+\section{Core System Implementation and Progress Report}
+\label{sec:implementation}
+
+This section reports the state of the implementation on 16~November
+2026. It covers schedule task~4 (persistent storage, document
+ingestion, chunking, and indexing) and the first part of task~5
+(baseline vector retrieval) from Section~\ref{sec:schedule}. The
+implementation follows the architecture of
+Section~\ref{sec:architecture}; the deviations are listed in
+Table~\ref{tab:stage3-deviations}.
+
+\subsection{Implementation progress and repository status}
+\label{sec:stage3-status}
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|p{45mm}|X|}
+\hline
+\textbf{Item} & \textbf{Status on 16.11.2026} \\
+\hline
+Main branch (\texttt{main}) &
+Repository infrastructure, project documentation, and the course
+corpus. Pull requests \#8, \#10, and \#11 were merged on 16.11.2026;
+the last CI run on \texttt{main} (commit \texttt{5e7ed70}) passed. \\
+\hline
+Activity since Stage~2 (30.10.2026) &
+9 commits on \texttt{main} from 3 merged pull requests. \\
+\hline
+Stage~3 implementation &
+Branch \texttt{base-backend}, to be merged into \texttt{main} through
+a pull request: 3\,277 non-blank lines of Python in \texttt{src/},
+1\,641 in \texttt{tests/}, and an end-to-end trace script. \\
+\hline
+Automated tests &
+94 tests (92 unit, 2 integration); all pass. \\
+\hline
+Code coverage &
+97\,\% with the unit tests and 98\,\% with the integration tests
+(statements and branches, measured with \texttt{coverage.py}). \\
+\hline
+Static checks &
+\texttt{ruff format}, \texttt{ruff}, \texttt{flake8}, and
+\texttt{pylint} (10.00/10) pass through pre-commit. \\
+\hline
+Continuous integration &
+The workflow now has three jobs: \texttt{build} (pre-commit, unit
+tests with coverage, Docker image), \texttt{integration} (tests
+against PostgreSQL~16 and Redis~7 service containers), and
+\texttt{e2e} (the end-to-end trace against the Docker Compose stack). \\
+\hline
+\end{tabularx}
+\caption{Implementation progress and repository status}
+\label{tab:stage3-status}
+\end{table}
+
+\subsection{Completed core components}
+\label{sec:stage3-components}
+
+\subsubsection*{Data and ingestion layer}
+
+\begin{itemize}
+    \item \textbf{HTTP API.} FastAPI routers under \texttt{/api/v1}
+    with Pydantic request and response models; the OpenAPI document
+    is published at \texttt{/openapi.json} with Swagger UI at
+    \texttt{/docs}. Table~\ref{tab:stage3-endpoints} lists the
+    implemented endpoints.
+
+    \item \textbf{Authentication and roles (NFR-05).} Bearer tokens are
+    HS256-signed JWTs whose subject is the user identifier; the role is
+    read from the \texttt{users} table on every request. Course
+    materials are managed by instructors and administrators; retrieval
+    is also open to researchers; a job is visible only to its owner and
+    to administrators.
+
+    \item \textbf{Errors and request identifiers.} Every error uses the
+    envelope of Section~\ref{sec:api-contracts} with a stable code and
+    the request identifier, which is also returned in the
+    \texttt{X-Request-ID} header and stored with the job. Unexpected
+    errors return a generic \texttt{500} without internal details.
+
+    \item \textbf{Upload (FR-01, FR-02, FR-04).} PDF, HTML, TXT, and
+    Markdown files are accepted; the extension and the PDF signature
+    are checked (\texttt{415}), the size limit is enforced
+    (\texttt{413}), and the metadata is validated (\texttt{422}). Files
+    are stored on the shared volume under generated names together with
+    a SHA-256 checksum; the response is \texttt{202 Accepted} with the
+    document and job identifiers.
+
+    \item \textbf{Text extraction (FR-03).} Markdown is split by
+    headings while fenced code blocks stay intact; HTML is split by
+    \texttt{h1}--\texttt{h6} headings with scripts and styles removed
+    and preformatted text preserved; PDF is extracted page by page; TXT
+    is read as UTF-8. Every text block keeps its section path or page
+    number. A file that cannot be processed fails its job with an
+    actionable message (for example, a non-UTF-8 text file or a damaged
+    PDF).
+
+    \item \textbf{Chunking (FR-06).} Fragments never cross a section or
+    page boundary. Paragraphs are packed up to 1\,200 characters, code
+    blocks are kept whole, and only longer paragraphs are cut into
+    windows with a 150-character overlap. The embedded text is
+    prefixed with the section path; the stored excerpt is the original
+    text.
+
+    \item \textbf{Persistence (FR-08, NFR-08).} PostgreSQL is accessed
+    through SQLAlchemy~2 on psycopg~3. The Alembic migration
+    \texttt{0001} creates \texttt{users}, \texttt{courses},
+    \texttt{knowledge\_bases}, \texttt{source\_documents},
+    \texttt{document\_chunks}, \texttt{background\_jobs}, and
+    \texttt{execution\_logs} with the constraints and indexes of
+    Section~\ref{sec:database-schema}, including the GIN index on
+    document metadata. An integration test checks that the migrated
+    database matches the mapped model.
+
+    \item \textbf{Background jobs (NFR-14).} The API enqueues ingestion,
+    course indexing, and retrieval jobs in Redis through RQ and returns
+    \texttt{202}. Each job moves through \texttt{queued},
+    \texttt{running}, and \texttt{succeeded} or \texttt{failed}; its
+    result or error code is stored in \texttt{background\_jobs}, and
+    each step with its duration in \texttt{execution\_logs}. A job
+    whose queue is unavailable is marked failed and the request returns
+    \texttt{503}.
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{|p{13mm}|p{62mm}|X|}
+\hline
+\textbf{Method} & \textbf{Path} & \textbf{Result} \\
+\hline
+GET & \url{/api/v1/health} & Database and queue readiness \\
+\hline
+POST & \url{/api/v1/documents} & \texttt{202} with document and job \\
+\hline
+GET & \url{/api/v1/documents} & Filtered, paginated list \\
+\hline
+GET & \url{/api/v1/documents/{document_id}} & Document, status, fragment count (added) \\
+\hline
+PATCH & \url{/api/v1/documents/{document_id}/metadata} & Updated document \\
+\hline
+POST & \url{/api/v1/courses/{course_id}/index} & \texttt{202} with job \\
+\hline
+POST & \url{/api/v1/courses/{course_id}/retrieval} & \texttt{202} with job (added) \\
+\hline
+GET & \url{/api/v1/jobs/{job_id}} & Status, result, or error \\
+\hline
+GET & \url{/api/v1/jobs/{job_id}/logs} & Execution log (added) \\
+\hline
+\end{tabularx}
+\caption{Implemented API endpoints}
+\label{tab:stage3-endpoints}
+\end{table}
+
+\subsubsection*{Indexing and baseline retrieval}
+
+\begin{itemize}
+    \item \textbf{Embeddings.} The \texttt{EmbeddingClient} port has two
+    adapters: the OpenAI adapter (configurable model, by default
+    \texttt{text-embedding-3-small}, with a timeout, bounded retries,
+    and recorded token usage) and an offline hashing bag-of-words
+    embedder with 1\,024 dimensions. The offline embedder is
+    deterministic and needs no network access; it is used by the tests
+    and the CI trace, not for evaluation.
+
+    \item \textbf{Vector index.} Chroma runs in embedded mode with
+    cosine distance and one collection per course and embedding model,
+    so vectors of different models are never mixed. Only the worker
+    opens the store: the worker is an RQ \texttt{SimpleWorker}, a single
+    process that keeps one Chroma client. Re-ingesting a document
+    replaces both its fragments and its vectors.
+
+    \item \textbf{Retrieval (FR-07, FR-11).} The vector strategy
+    implements the \texttt{RetrievalStrategy} port of
+    Listing~\ref{lst:ports}. Metadata filters (course, knowledge base,
+    document type, topic) are resolved in PostgreSQL, and excerpts are
+    read from \texttt{document\_chunks}, so every evidence candidate
+    resolves to a stored fragment and its source document. A vector
+    whose fragment no longer exists is dropped (NFR-10).
+
+    \item \textbf{Source-authority policy (FR-12, FR-13).} Evidence for
+    mandatory requirements comes only from the primary knowledge base.
+    Evidence for context may come from both bases, but a supplementary
+    fragment ranks below a primary fragment of equal similarity.
+
+    \item \textbf{Course corpus.} The repository contains 50 Markdown
+    documents of the Operating Systems course (graded laboratory tasks,
+    tutorials, sample tasks, and test tasks) and 5 archives with
+    starter files in \texttt{dataset/}; the tests and the end-to-end
+    trace use them.
+\end{itemize}
+
+\subsubsection*{Deviations from the Stage~2 design}
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{xltabular}{\textwidth}{|p{30mm}|X|X|}
+\hline
+\textbf{Element} & \textbf{Change} & \textbf{Reason} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Element} & \textbf{Change} & \textbf{Reason} \\
+\hline
+\endhead
+\multicolumn{3}{r}{\textit{Continued on the next page}} \\
+\endfoot
+\caption{Deviations from the Stage~2 design}
+\label{tab:stage3-deviations} \\
+\endlastfoot
+
+\texttt{background\_jobs} &
+Columns \texttt{parameters}, \texttt{result}, and
+\texttt{request\_id} added. &
+The job status endpoint returns the job result; request identifiers
+connect logs to requests. \\
+\hline
+Job types &
+\texttt{document\_ingestion}, \texttt{course\_indexing}, and the new
+\texttt{retrieval}; the other planned types follow with their stages. &
+Only the worker opens Chroma, so retrieval runs as a job. \\
+\hline
+Database tables &
+7 of the planned tables exist. &
+Assignment, claim, benchmark, and evaluation tables are created with
+the stages that use them. \\
+\hline
+API &
+Three endpoints added (Table~\ref{tab:stage3-endpoints}). &
+Document inspection (FR-01), job logs (NFR-14), and a retrieval
+preview for configuring the baseline (FR-11). \\
+\hline
+Embeddings &
+An offline hashing embedder added next to OpenAI. &
+Tests and CI run without an API key or network access. \\
+\hline
+Database access &
+SQLAlchemy~2 and Alembic on top of psycopg~3. &
+Versioned migrations; the same repositories run on SQLite in unit
+tests and on PostgreSQL in production and integration tests. \\
+\hline
+\end{xltabular}
+\endgroup
+
+\subsection{First working end-to-end trace}
+\label{sec:stage3-trace}
+
+The trace was produced by \texttt{scripts/e2e\_trace.py}, which uses
+only the public HTTP API. It ran on a Windows~11 workstation with the
+API on Uvicorn, PostgreSQL~16.2, the persistent Chroma store, and the
+hashing embedder. Docker is not installed on that workstation, so jobs
+ran inside the API process (\texttt{QUEUE\_BACKEND=inline}). The queued
+path through Redis and the separate RQ worker is verified by the
+integration test in Section~\ref{sec:stage3-tests}; the CI job
+\texttt{e2e} runs the same script against the Docker Compose stack.
+
+\begin{enumerate}
+    \item \texttt{GET /api/v1/health} reported the database and the
+    queue as available.
+
+    \item The script uploaded all 50 Markdown files of the corpus with
+    their metadata: course \texttt{operating-systems}, primary knowledge
+    base, document type derived from the file name, and topic taken
+    from the document header. Every upload returned
+    \texttt{202 Accepted} with a document and a job identifier; the
+    median response time was 52~ms and the 95th percentile 87~ms (the
+    first request took 939~ms while the server warmed up).
+
+    \item Traced document \texttt{L5\_Tutorial\_FIFO\_Pipe.md}: the
+    upload was accepted in 75~ms and its ingestion job succeeded after
+    61~ms: extraction 8.8~ms, chunking 0.4~ms, embedding 7.3~ms,
+    PostgreSQL write 7.9~ms, and Chroma write 27.1~ms. The document
+    status changed to \texttt{indexed} with 41 fragments, each stored
+    with its section path.
+
+    \item All 50 documents were indexed and none failed: 616 fragments
+    in total, from 1 to 55 per document (median 7). The median
+    ingestion time was 37~ms per document and 2.09~s for the corpus.
+
+    \item Three retrieval requests returned \texttt{202}; their jobs
+    succeeded in 27--37~ms per round trip, of which retrieval took
+    8--13~ms. Table~\ref{tab:stage3-queries} shows the top result of
+    each query.
+\end{enumerate}
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|X|p{62mm}|p{17mm}|}
+\hline
+\textbf{Query} & \textbf{Top evidence (file, section)} & \textbf{Similarity} \\
+\hline
+How do I create a named pipe with \texttt{mkfifo} and read from it? &
+\texttt{L2\_Tutorial\_Filesystem.md}, I/O Multiplexing
+$\rightarrow$ Named Pipes in Brief & 0.372 \\
+\hline
+How can threads protect a shared counter with a mutex? &
+\texttt{L6\_Sample\_Task\_2\_Shared\_Integration.md}, Stages
+$\rightarrow$ Stage~1 & 0.353 \\
+\hline
+How does a UDP server receive datagrams with \texttt{recvfrom}? &
+\texttt{L8\_Tutorial\_Datagram\_Protocols.md}, Task & 0.258 \\
+\hline
+\end{tabularx}
+\caption{Retrieval results in the end-to-end trace (hashing embedder)}
+\label{tab:stage3-queries}
+\end{table}
+
+Every result points to a stored fragment with its file and section
+path, as FR-07 requires. The hashing embedder matches words, not
+meaning: the dedicated FIFO tutorial (\texttt{L5}) is not among the
+top three results for the named-pipe query, and the mutex query
+prefers a task that uses the same words over the synchronization
+tutorial. The trace therefore verifies the data flow, not retrieval
+quality, which will be measured with semantic embeddings on the
+benchmark.
+
+\subsection{Unit and integration test report}
+\label{sec:stage3-tests}
+
+Unit tests use in-memory SQLite, an in-memory vector index or Chroma in
+a temporary directory, and a fake Redis; they need no services. The
+integration tests apply the Alembic migrations to a PostgreSQL
+database, compare the result with the mapped model, and run the whole
+flow from upload through the RQ worker and Chroma to a retrieval job.
+Listing~\ref{lst:stage3-pytest} shows the run of both suites.
+
+\begin{lstlisting}[
+    numbers=none,
+    basicstyle=\ttfamily\scriptsize,
+    caption={Test run with coverage (16.11.2026)},
+    label={lst:stage3-pytest}
+]
+$ uv run pytest -m "integration or not integration" --cov
+============================= test session starts =============================
+platform win32 -- Python 3.12.16, pytest-9.1.1, pluggy-1.6.0
+rootdir: ...\rag-lab-generator
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.16.0, cov-7.1.0
+collected 94 items
+
+tests\integration\test_postgres_pipeline.py ..                           [  2%]
+tests\unit\test_adapters.py .........                                    [ 11%]
+tests\unit\test_api.py ........................                          [ 37%]
+tests\unit\test_chunking.py ........                                     [ 45%]
+tests\unit\test_cli_and_worker.py ....                                   [ 50%]
+tests\unit\test_embeddings_and_policy.py .........                       [ 59%]
+tests\unit\test_extractors.py ..................                         [ 78%]
+tests\unit\test_ingestion_and_retrieval.py .........                     [ 88%]
+tests\unit\test_jobs.py ......                                           [ 94%]
+tests\unit\test_repositories.py .....                                    [100%]
+
+Name                         Stmts   Miss Branch BrPart  Cover
+---------------------------------------------------------------
+(rows for the individual modules omitted)
+TOTAL                         1654     23    212     18    98%
+============================= 94 passed in 7.70s ==============================
+\end{lstlisting}
+
+\subsection{Adherence to schedule and critical path}
+\label{sec:stage3-schedule}
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{xltabular}{\textwidth}{|p{8mm}|p{42mm}|p{25mm}|X|}
+\hline
+\textbf{No.} & \textbf{Task (planned dates)} & \textbf{Status} &
+\textbf{Notes} \\
+\hline
+\endfirsthead
+\hline
+\textbf{No.} & \textbf{Task (planned dates)} & \textbf{Status} &
+\textbf{Notes} \\
+\hline
+\endhead
+\multicolumn{4}{r}{\textit{Continued on the next page}} \\
+\endfoot
+\caption{Schedule status on 16.11.2026}
+\label{tab:stage3-schedule} \\
+\endlastfoot
+
+1 &
+Planning and repository setup (01.10--25.10) &
+Completed &
+Requirements, schedule, risk analysis, architecture, API contracts,
+and schema (versions 1.1--1.3); repository with CI. \\
+\hline
+2 &
+Corpus and metadata design (26.10--08.11) &
+Completed with delay &
+Corpus committed on 16.11 (pull request \#11); metadata fields and the
+source-authority policy are implemented. \\
+\hline
+3 &
+Benchmark, metrics, and rubric (26.10--15.11) &
+Delayed &
+The benchmark is not yet in the repository, so milestone M1 is only
+partly reached. It must be frozen before the retrieval configuration
+of task~5 is tuned (FR-26). \\
+\hline
+4 &
+Storage, ingestion, and indexing (02.11--22.11) &
+Completed &
+Delivered before the planned end date (this section). \\
+\hline
+5 &
+Baseline vector RAG (16.11--29.11) &
+In progress &
+Vector retrieval, metadata filters, and the source-authority policy
+work; remaining: indexing with OpenAI embeddings and tuning fragment
+size and \texttt{top\_k} on the development set. \\
+\hline
+6--12 &
+Later tasks (from 23.11) &
+Not started &
+As planned. \\
+\hline
+\end{xltabular}
+\endgroup
+
+The critical path runs from the corpus through the benchmark (task~3)
+and the baseline (task~5) to the comparison of the four architectures
+(tasks~6 and 10). Storage and ingestion, which every architecture
+needs, are complete, so milestone M2 (29.11.2026) depends on the
+remaining part of task~5 and on the benchmark. The delay of task~3 is
+the main schedule risk: until the held-out benchmark is frozen, the
+baseline cannot be tuned without the risk of tuning on the test data.
+
+\vspace{12mm}
+\noindent
+Supervisor signature (Stage~3 acceptance):
+\rule{60mm}{0.4pt}
+\hfill
+Date: \rule{30mm}{0.4pt}
+
+
+% =================================================
+% 11 Bibliography
 % =================================================
 \section{Bibliography}
 \label{sec:bibliography}
