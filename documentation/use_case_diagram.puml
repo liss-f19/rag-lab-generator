@@ -1,0 +1,66 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+actor Instructor
+actor "Administrator / Researcher" as Researcher
+actor "Expert Evaluator" as Evaluator
+actor "Configured Model Provider" as Model
+
+rectangle "RAG Lab Generator" as System {
+  usecase "Manage source documents\nand metadata" as ManageSources
+  usecase "Prepare corpus\nand indexes" as PrepareCorpus
+  usecase "Create embeddings" as CreateEmbeddings
+
+  usecase "Configure assignment request" as ConfigureAssignment
+  usecase "Generate evidence-grounded\nassignment" as GenerateAssignment
+  usecase "Retrieve evidence from primary\nand permitted supplementary sources" as RetrieveEvidence
+  usecase "Generate assignment draft" as GenerateDraft
+  usecase "Validate schema, citations,\nand evidence coverage" as ValidateOutput
+  usecase "Return structured abstention for\nunsupported or conflicting evidence" as Abstain
+  usecase "Inspect retrieved evidence" as InspectEvidence
+  usecase "Edit or regenerate\nassignment sections" as EditAssignment
+  usecase "Export assignment" as ExportAssignment
+
+  usecase "Configure architecture\nand experiment" as ConfigureExperiment
+  usecase "Run held-out benchmark" as RunBenchmark
+  usecase "Record expert assessments\nand evaluation results" as RecordEvaluation
+  usecase "Review execution logs\nand reproduce experiments" as ReviewExperiments
+}
+
+Instructor -- ManageSources
+Instructor -- PrepareCorpus
+Instructor -- ConfigureAssignment
+Instructor -- GenerateAssignment
+Instructor -- InspectEvidence
+Instructor -- EditAssignment
+Instructor -- ExportAssignment
+
+Researcher -- ManageSources
+Researcher -- PrepareCorpus
+Researcher -- ConfigureExperiment
+Researcher -- RunBenchmark
+Researcher -- RecordEvaluation
+Researcher -- ReviewExperiments
+Evaluator -- RecordEvaluation
+
+Model -- CreateEmbeddings
+Model -- GenerateDraft
+
+PrepareCorpus ..> CreateEmbeddings : <<include>>
+GenerateAssignment ..> RetrieveEvidence : <<include>>
+GenerateAssignment ..> GenerateDraft : <<include>>
+GenerateAssignment ..> ValidateOutput : <<include>>
+Abstain ..> ValidateOutput : <<extend>>
+
+note bottom of Abstain
+  Used when required evidence is unavailable,
+  contradictory, or fails validation.
+end note
+
+note bottom of System
+  Uses local, approved course knowledge bases; no web search.
+  Research and architecture comparison are optional modes.
+end note
+@enduml
