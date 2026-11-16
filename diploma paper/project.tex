@@ -20,7 +20,7 @@
 \usepackage{array}
 \usepackage{enumitem}
 \usepackage{tikz}
-\usetikzlibrary{shapes.geometric, positioning, calc, fit, arrows.meta}
+\usetikzlibrary{shapes.geometric, shapes.multipart, positioning, calc, fit, arrows.meta}
 \usepackage{pgfcalendar}
 \usepackage{url}
 \usepackage{hyperref}
@@ -152,6 +152,56 @@ Dr hab.\ inż.\ Jerzy Balicki, prof.\ PW%
     \edef\GanttAt{\the\GanttDay}%
     \node[gantt milestone] at ({\GanttAt*\GanttDayW}, -75mm) {};
     \node[font=\scriptsize] at ({\GanttAt*\GanttDayW}, -78.6mm) {#2};
+}
+
+% -------------------------------------------------
+% Diagram styles (Section 6)
+% -------------------------------------------------
+% UML guard condition, e.g. \guard{checks passed}; unlike a literal
+% bracket, it is safe directly after \\ in node text.
+\newcommand{\guard}[1]{[#1]}
+
+\tikzset{
+    dg base/.style={font=\fontsize{9}{10.5}\selectfont},
+    dg label/.style={font=\scriptsize, inner sep=1pt},
+    dg mlabel/.style={font=\scriptsize, fill=white, inner sep=0.8pt},
+    dg mult/.style={font=\tiny, inner sep=0.8pt},
+    dg box/.style={draw, rounded corners=1.5pt, align=center, inner sep=2pt},
+    dg external/.style={dg box, dashed},
+    dg store/.style={
+        draw, cylinder, shape border rotate=90, aspect=0.2,
+        align=center, inner sep=2pt
+    },
+    dg uses/.style={->, >={Stealth[length=1.8mm]}},
+    dg both/.style={<->, >={Stealth[length=1.8mm]}},
+    dg flow/.style={->, >={Stealth[length=1.6mm]}},
+    dg msg/.style={->, >={Stealth[length=1.6mm]}},
+    dg async/.style={->, >={Straight Barb[length=1.6mm]}},
+    dg return/.style={dashed, ->, >={Straight Barb[length=1.6mm]}},
+    dg dep/.style={dashed, ->, >={Straight Barb[length=1.8mm]}},
+    dg real/.style={dashed, ->, >={Triangle[open, length=2.5mm, width=2.5mm]}},
+    dg comp/.style={<-, >={Diamond[length=2.6mm, width=1.8mm]}},
+    dg class/.style={
+        draw, fill=white, rectangle split, rectangle split parts=2,
+        rectangle split part align={center, left},
+        text width=#1, font=\scriptsize, inner sep=1.5pt
+    },
+    dg class/.default=34mm,
+    dg state/.style={
+        draw, rounded corners=3mm, align=center,
+        minimum width=24mm, minimum height=8mm, font=\scriptsize
+    },
+    dg action/.style={
+        draw, rounded corners=2.5mm, align=center, text width=#1,
+        minimum height=6mm, inner sep=1.5pt, font=\scriptsize
+    },
+    dg action/.default=72mm,
+    dg decision/.style={
+        draw, diamond, aspect=2.4, align=center, inner sep=0.5pt,
+        font=\scriptsize
+    },
+    dg initial/.style={circle, fill, minimum size=3mm, inner sep=0pt},
+    dg final/.style={circle, draw, minimum size=3.6mm, inner sep=0pt}
 }
 
 \begin{document}
@@ -310,7 +360,7 @@ The outcome will be a documented and deployable web application for instructors,
 \section{Vocabulary}
 \label{sec:vocabulary}
 
-\begin{description}[style=nextline,leftmargin=0pt,labelindent=0pt]
+\begin{description}[style=nextline]
 
 \item[Retrieval-Augmented Generation (RAG)]
 A technique that combines information retrieval with text generation.
@@ -1442,12 +1492,1463 @@ evaluation and final deliverables. \\
 
 \section{System Architecture and Design}
 \label{sec:architecture}
+
+This section describes the target design of the application. It is
+consistent with the technology stack in
+Section~\ref{sec:technology-stack}, the API contracts in
+Section~\ref{sec:api-contracts}, and the database schema in
+Section~\ref{sec:database-schema}. The components are implemented
+according to the schedule in Section~\ref{sec:schedule}.
+
+% -------------------------------------------------
+% 6.1
+% -------------------------------------------------
 \subsection{System architecture: modules and their responsibilities}
+\label{sec:architecture-modules}
+
+The application is designed as a modular monolith: one Python code
+base with two runtime processes. The API service handles interactive
+HTTP requests from the web client, and the worker executes
+long-running jobs taken from the Redis queue. Both processes use the
+same domain and service modules, so business rules such as the
+source-authority policy and the validation rules are implemented
+only once.
+
+The data stores are separated by purpose. PostgreSQL holds the
+relational application data, Redis holds the job queue, and a shared
+file volume holds the original source files and derived index
+artifacts. Chroma stores the vector embeddings in embedded mode.
+Because Chroma's local persistent storage is not safe for concurrent
+writers in several processes, only the worker opens it; the API
+reads evidence excerpts from the \texttt{document\_chunks} table
+instead. The worker is also the only component that calls the OpenAI
+API, which keeps the API key, model usage records, and network
+access to the model provider in one place.
+
+Figure~\ref{fig:architecture-overview} shows the processes, their
+modules, and the data stores. Table~\ref{tab:architecture-modules}
+lists the responsibilities of each module.
+
+\begin{figure}[htbp]
+\centering
+% Scaled down only if wider than the text block; otherwise natural size.
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tikzpicture}[
+    dg base,
+    module/.style={
+        dg box,
+        fill=white,
+        minimum width=24mm,
+        minimum height=8mm,
+        text width=22mm,
+        font=\scriptsize
+    },
+    container/.style={draw, minimum width=160mm, minimum height=24mm},
+    container title/.style={
+        anchor=north west,
+        font=\fontsize{9}{10.5}\selectfont\bfseries
+    }
+]
+    % Web client
+    \node[dg box, minimum width=160mm, minimum height=10mm] (client) at (0,0)
+        {\textbf{Web client:} React single-page application
+         (TypeScript, Chart.js)\\instructor, student, and researcher views};
+
+    % API service and its modules
+    \node[container] (api) at (0,-27mm) {};
+    \node[container title] at ($(api.north west)+(1.5mm,-1mm)$)
+        {API service (FastAPI on Uvicorn)};
+    \node[module] at (-65mm,-30mm) {Authentication\\and roles};
+    \node[module] at (-39mm,-30mm) {Course materials\\and metadata};
+    \node[module] at (-13mm,-30mm) {Assignments\\and export};
+    \node[module] at (13mm,-30mm) {Evaluation\\runs};
+    \node[module] at (39mm,-30mm) {Job status};
+    \node[module] at (65mm,-30mm) {OpenAPI and\\error handling};
+
+    % Data stores shared by both processes
+    \node[dg store, text width=26mm] (pg) at (-50mm,-55.5mm)
+        {PostgreSQL\\relational data};
+    \node[dg store, text width=26mm] (redis) at (0,-55.5mm)
+        {Redis\\job queue};
+    \node[dg store, text width=26mm] (files) at (50mm,-55.5mm)
+        {File storage\\sources, artifacts};
+
+    % Worker and its modules
+    \node[container] (worker) at (0,-84mm) {};
+    \node[container title] at ($(worker.north west)+(1.5mm,-1mm)$)
+        {Worker (RQ)};
+    \node[module] at (-65mm,-87mm) {Ingestion\\and chunking};
+    \node[module] at (-39mm,-87mm) {Indexing};
+    \node[module] at (-13mm,-87mm) {Retrieval\\(4 strategies)};
+    \node[module] at (13mm,-87mm) {Generation};
+    \node[module] at (39mm,-87mm) {Evidence\\validation};
+    \node[module] at (65mm,-87mm) {Evaluation\\runner};
+
+    % Resources used only by the worker
+    \node[dg store, text width=26mm] (chroma) at (-40mm,-111mm)
+        {Chroma\\vectors (embedded)};
+    \node[dg external, text width=30mm, minimum height=10mm] (openai)
+        at (40mm,-110mm) {OpenAI API\\external service};
+
+    % Connections
+    \draw[dg both] (client.south) --
+        node[right, dg label] {HTTPS, JSON (\texttt{/api/v1})} (api.north);
+    \draw[dg uses] (pg.north |- api.south) --
+        node[right, dg label] {SQL} (pg.north);
+    \draw[dg uses] (redis.north |- api.south) --
+        node[right, dg label] {enqueue jobs} (redis.north);
+    \draw[dg uses] (files.north |- api.south) --
+        node[right, dg label] {store uploads} (files.north);
+    \draw[dg uses] (pg.south |- worker.north) --
+        node[right, dg label] {SQL} (pg.south);
+    \draw[dg uses] (redis.south |- worker.north) --
+        node[right, dg label] {dequeue jobs} (redis.south);
+    \draw[dg uses] (files.south |- worker.north) --
+        node[right, dg label] {read and write files} (files.south);
+    \draw[dg uses] (chroma.north |- worker.south) --
+        node[right, dg label] {embedded client} (chroma.north);
+    \draw[dg uses] (openai.north |- worker.south) --
+        node[right, dg label] {HTTPS, JSON} (openai.north);
+\end{tikzpicture}%
+}
+\caption{Logical architecture: processes, modules, and data stores}
+\label{fig:architecture-overview}
+\end{figure}
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{xltabular}{\textwidth}{
+    |p{32mm}|p{19mm}|X|
+}
+\hline
+\textbf{Module} &
+\textbf{Runs in} &
+\textbf{Responsibilities} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Module} &
+\textbf{Runs in} &
+\textbf{Responsibilities} \\
+\hline
+\endhead
+
+\multicolumn{3}{r}{\textit{Continued on the next page}} \\
+\endfoot
+
+\caption{Modules and their responsibilities}
+\label{tab:architecture-modules} \\
+\endlastfoot
+
+Web client &
+Browser &
+Role-specific views for course materials, assignment configuration,
+assignment review with evidence, and evaluation results; calls the
+API and polls job status. \\
+\hline
+
+HTTP interface &
+API &
+FastAPI routers under \texttt{/api/v1}, Pydantic request and
+response models, the OpenAPI document, the uniform error envelope,
+and request identifiers. \\
+\hline
+
+Identity and access &
+API &
+Bearer-token authentication, role checks for instructors, students,
+researchers, and administrators, ownership rules, and the
+restrictions of the student practice mode. \\
+\hline
+
+Course materials &
+API &
+Upload of source files to file storage, document metadata,
+assignment of documents to the primary or supplementary knowledge
+base, and start of ingestion and indexing jobs. \\
+\hline
+
+Ingestion &
+Worker &
+Text extraction for PDF, HTML, TXT, and Markdown; normalization;
+segmentation into fragments that keep the source identifier, page
+number, and section path. \\
+\hline
+
+Indexing &
+Worker &
+Embeddings and Chroma collections per course and embedding model;
+a lexical (BM25) index; graph indexes for LightRAG and GraphRAG,
+stored as artifacts in file storage. \\
+\hline
+
+Retrieval &
+Worker &
+Four interchangeable strategies (vector, hybrid, LightRAG, GraphRAG)
+behind one interface; application of the source-authority policy;
+ranked evidence candidates. \\
+\hline
+
+Generation &
+Worker &
+Versioned prompt templates, assignment drafts constrained by the
+output schema, and section regeneration. \\
+\hline
+
+Evidence validation &
+Worker, API &
+Output schema and required sections, validity of source references,
+claim classification (supported, contradicted, unsupported), and
+structured validation issues. \\
+\hline
+
+Assignments &
+API &
+Persistence of sections, claims, and evidence links; section editing
+with re-validation; Markdown and PDF export of complete
+assignments. \\
+\hline
+
+Evaluation &
+API, Worker &
+Benchmark sets and requests, evaluation runs with frozen
+configurations, metric computation, and aggregated results. \\
+\hline
+
+Jobs &
+API, Worker &
+Enqueueing through RQ, job state in \texttt{background\_jobs},
+execution logs, and the job status endpoint. \\
+\hline
+
+Model gateway &
+Worker &
+Access to the OpenAI API with configured model identifiers,
+timeouts, and retries; recording of token usage and estimated
+cost. \\
+\hline
+
+Persistence adapters &
+API, Worker &
+PostgreSQL repositories, the Chroma adapter, and file-storage
+access. \\
+\hline
+
+\end{xltabular}
+\endgroup
+
+% -------------------------------------------------
+% 6.2
+% -------------------------------------------------
 \subsection{Modules design: interfaces dependencies, layers}
+\label{sec:architecture-layers}
+
+The code base follows a layered structure in which dependencies
+point inward (Table~\ref{tab:architecture-layers}). The domain layer
+contains entities, value objects, and the interfaces (ports) that
+the application needs from the outside world; it does not import
+FastAPI, RQ, database drivers, or model SDKs. Infrastructure
+adapters implement these ports. The API routers and the RQ job
+functions are thin entry points that call the same application
+services, so the API and the worker share one implementation of
+each use case. Circular dependencies between modules are not
+allowed; a module uses another module only through its service
+interface.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|p{25mm}|X|p{42mm}|}
+\hline
+\textbf{Layer} &
+\textbf{Contents} &
+\textbf{May depend on} \\
+\hline
+Presentation &
+React views, form state, and a typed API client based on the
+OpenAPI document &
+The HTTP API only \\
+\hline
+Interface &
+FastAPI routers, Pydantic request and response models,
+authentication and role dependencies, and error handlers; RQ job
+entry points in the worker &
+Application layer \\
+\hline
+Application &
+Use-case services for documents, ingestion, indexing, assignments,
+validation, evaluation, and jobs; transaction boundaries &
+Domain layer and its ports \\
+\hline
+Domain &
+Entities (course, knowledge base, document, fragment, assignment,
+section, claim, evidence), value objects (assignment configuration,
+source-authority policy), and ports &
+Python standard library only \\
+\hline
+Infrastructure &
+Adapters for PostgreSQL, Chroma, the BM25 index, LightRAG and
+GraphRAG, the OpenAI API, file storage, and RQ &
+Domain ports and external libraries \\
+\hline
+\end{tabularx}
+\caption{Layers and dependency rules}
+\label{tab:architecture-layers}
+\end{table}
+
+Table~\ref{tab:architecture-ports} lists the main ports and their
+implementations.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|p{50mm}|X|p{45mm}|}
+\hline
+\textbf{Port (interface)} &
+\textbf{Implementations} &
+\textbf{Used by} \\
+\hline
+\texttt{DocumentRepository}, \texttt{AssignmentRepository},
+\texttt{EvaluationRepository} &
+PostgreSQL repositories (psycopg~3) &
+Application services \\
+\hline
+\texttt{FileStorage} &
+Adapter for the shared file volume &
+Course materials, ingestion, export \\
+\hline
+\texttt{TextExtractor} &
+PDF, HTML, TXT, and Markdown extractors &
+Ingestion \\
+\hline
+\texttt{EmbeddingClient} &
+OpenAI embeddings adapter &
+Indexing; vector and hybrid retrieval \\
+\hline
+\texttt{RetrievalStrategy} &
+Vector, hybrid, LightRAG, and GraphRAG retrievers &
+Assignment and evaluation services \\
+\hline
+\texttt{LanguageModelClient} &
+OpenAI adapter in the model gateway &
+Generation; claim classification \\
+\hline
+\texttt{EvidenceValidator} &
+Deterministic checks combined with the claim classifier &
+Assignment service \\
+\hline
+\texttt{JobQueue} &
+RQ adapter on Redis &
+API services that start jobs \\
+\hline
+\end{tabularx}
+\caption{Main ports and their implementations}
+\label{tab:architecture-ports}
+\end{table}
+
+Listing~\ref{lst:ports} shows the central ports as Python protocols.
+Retrieval strategies return evidence candidates that always carry
+the identifier of a fragment in \texttt{document\_chunks}. Every
+retrieved passage therefore remains traceable to its source document,
+whichever architecture produced it (FR-07).
+
+\begin{lstlisting}[
+    language=Python,
+    caption={Central ports as Python protocols (simplified)},
+    label={lst:ports}
+]
+from dataclasses import dataclass
+from typing import Protocol, Sequence
+
+
+@dataclass(frozen=True)
+class EvidenceCandidate:
+    chunk_id: str
+    document_id: str
+    knowledge_base: str  # "primary" or "supplementary"
+    excerpt: str
+    score: float
+
+
+class RetrievalStrategy(Protocol):
+    name: str  # "vector", "hybrid", "lightrag", or "graphrag"
+
+    def build_index(self, course_id: str) -> None: ...
+
+    def retrieve(
+        self,
+        query: RetrievalQuery,
+        policy: SourceAuthorityPolicy,
+        top_k: int,
+    ) -> list[EvidenceCandidate]: ...
+
+
+class LanguageModelClient(Protocol):
+    def generate(self, prompt: Prompt, output_schema: type) -> ModelResponse: ...
+
+
+class EvidenceValidator(Protocol):
+    def validate(
+        self,
+        draft: AssignmentDraft,
+        evidence: Sequence[EvidenceCandidate],
+    ) -> ValidationReport: ...
+\end{lstlisting}
+
+The assignment service uses the same generator, prompt version,
+output schema, and validator for every retrieval architecture. Only
+the \texttt{RetrievalStrategy} implementation changes; it is selected
+by the \texttt{retrieval\_architecture} value of the assignment or by
+the configuration of an evaluation run. The comparability
+requirement NFR-06 therefore follows from the module structure.
+
+% -------------------------------------------------
+% 6.3
+% -------------------------------------------------
 \subsection{Communication Layer Design: protocols, libraries, network}
+\label{sec:architecture-communication}
+
+All services run as containers of one Docker Compose project on the
+lab host (Figure~\ref{fig:deployment}). They communicate over a
+private Compose network, and only the API port is published on the
+host. PostgreSQL and Redis are reachable only from the API and
+worker containers. Table~\ref{tab:communication} lists each
+connection with its protocol, library, and network exposure.
+
+\begin{figure}[htbp]
+\centering
+% Scaled down only if wider than the text block; otherwise natural size.
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tikzpicture}[dg base]
+    \node[dg box, text width=24mm, minimum height=12mm] (browser)
+        at (-85mm,0) {\textbf{Web browser}\\React SPA};
+    \node[dg box, text width=26mm, font=\scriptsize] (api) at (-30mm,0)
+        {\textbf{api}\\FastAPI, Uvicorn\\port 8000\\volume: \texttt{files}};
+    \node[dg store, text width=24mm, font=\scriptsize] (redis) at (8mm,14mm)
+        {\textbf{redis}\\port 6379\\volume: \texttt{redis-data}};
+    \node[dg store, text width=24mm, font=\scriptsize] (pg) at (8mm,-14mm)
+        {\textbf{postgres}\\port 5432\\volume: \texttt{pg-data}};
+    \node[dg box, text width=28mm, font=\scriptsize] (worker) at (46mm,0)
+        {\textbf{worker}\\RQ worker, Chroma client\\volumes: \texttt{files},
+         \texttt{chroma}};
+
+    % Lab host with the private Compose network
+    \node[anchor=south west, font=\scriptsize\bfseries] (hosttitle)
+        at ($(api.north west)+(0,18mm)$)
+        {Lab host: Docker Compose project, private network \texttt{backend}};
+    \node[draw, rounded corners=3pt, inner sep=4mm,
+          fit=(hosttitle)(api)(redis)(pg)(worker)] (host) {};
+
+    \node[dg external, text width=30mm, font=\scriptsize] (openai)
+        at (46mm,-42mm) {\textbf{OpenAI API}\\internet};
+
+    \draw[dg uses] (browser.east) --
+        node[pos=0.33, above, dg label] {HTTPS, JSON}
+        node[pos=0.33, below, dg label] {port 8000} (api.west);
+    \draw[dg uses] (api.east) --
+        node[sloped, above, dg label] {RESP} (redis.west);
+    \draw[dg uses] (api.east) --
+        node[sloped, below, dg label] {SQL} (pg.west);
+    \draw[dg uses] (worker.west) --
+        node[sloped, above, dg label] {RESP} (redis.east);
+    \draw[dg uses] (worker.west) --
+        node[sloped, below, dg label] {SQL} (pg.east);
+    \draw[dg uses] (worker.south) --
+        node[right, dg label] {outbound HTTPS (443)} (openai.north);
+\end{tikzpicture}%
+}
+\caption{Deployment and network view (Docker Compose)}
+\label{fig:deployment}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|p{28mm}|p{46mm}|p{36mm}|X|}
+\hline
+\textbf{Connection} &
+\textbf{Protocol and data format} &
+\textbf{Library} &
+\textbf{Network exposure} \\
+\hline
+Browser $\rightarrow$ API &
+HTTP/1.1 over TLS; JSON and \texttt{multipart/form-data};
+bearer token &
+Browser Fetch API; FastAPI, Uvicorn, Pydantic &
+Port 8000 published on the lab host \\
+\hline
+API, worker $\rightarrow$ PostgreSQL &
+PostgreSQL wire protocol over TCP &
+psycopg~3 &
+Internal network only (5432) \\
+\hline
+API, worker $\rightarrow$ Redis &
+RESP over TCP; RQ job payloads &
+redis-py, RQ &
+Internal network only (6379) \\
+\hline
+Worker $\rightarrow$ Chroma &
+In-process calls on local persistent storage &
+\texttt{chromadb} (\texttt{PersistentClient}) &
+None (volume \texttt{chroma}) \\
+\hline
+Worker $\rightarrow$ OpenAI API &
+HTTPS; JSON (REST) &
+\texttt{openai} Python SDK &
+Outbound TCP 443 \\
+\hline
+API, worker $\rightarrow$ file storage &
+File I/O on a shared volume &
+Python standard library &
+None (volume \texttt{files}) \\
+\hline
+\end{tabularx}
+\caption{Connections, protocols, and libraries}
+\label{tab:communication}
+\end{table}
+
+The communication layer follows these rules:
+
+\begin{itemize}
+    \item \textbf{Asynchronous jobs.} Operations that can outlast an
+    interactive request (document ingestion, course indexing,
+    assignment generation, section regeneration, and evaluation runs)
+    return \texttt{202 Accepted} with a job identifier. The web client
+    polls \texttt{GET /api/v1/jobs/\{job\_id\}} every two seconds,
+    with longer intervals for long jobs, until the job has succeeded
+    or failed. No WebSocket connection is needed.
+
+    \item \textbf{Validation at the boundary.} Pydantic models validate
+    every request and response body against the published OpenAPI
+    schema. Errors use the envelope defined in
+    Section~\ref{sec:api-contracts}.
+
+    \item \textbf{Request identifiers.} The API assigns an identifier to
+    each request, returns it in error responses, and passes it to
+    queued jobs, so execution logs can be matched to the request that
+    started them.
+
+    \item \textbf{Single origin.} The production build of the web client
+    is served by the API service, so the browser does not send
+    cross-origin requests. During development, the frontend
+    development server forwards \texttt{/api} requests to the API.
+
+    \item \textbf{Model calls.} Calls to the OpenAI API use explicit
+    timeouts and a bounded number of retries with exponential back-off
+    for rate-limit (\texttt{429}) and server (\texttt{5xx}) responses.
+    Token usage and latency are recorded for each call (NFR-10).
+
+    \item \textbf{Limits.} Uploads above the configured size limit are
+    rejected with \texttt{413}, and unsupported media types with
+    \texttt{415}.
+
+    \item \textbf{Secrets.} The database password, the token signing
+    key, and the OpenAI API key are passed as environment variables
+    from a \texttt{.env} file that is excluded from version control
+    and from the Docker image (NFR-07).
+\end{itemize}
+
+% -------------------------------------------------
+% 6.4
+% -------------------------------------------------
 \subsection{Main components description: classes, states, activity, events diagrams}
+\label{sec:architecture-components}
+
+\subsubsection*{Main components}
+
+\begin{description}[style=nextline,leftmargin=0pt,labelindent=0pt]
+
+\item[Assignment service]
+Coordinates the generation of official and practice assignments. It
+loads the configuration, selects the retrieval strategy, passes the
+evidence to the generator and the validator, and stores the result.
+Official and practice assignments use the same pipeline; the mode
+changes only the access rights.
+
+\item[Retrieval strategies]
+The vector strategy embeds the query and searches the Chroma
+collection of the course, filtered by knowledge base and metadata.
+The hybrid strategy combines a BM25 ranking with the vector ranking
+using reciprocal rank fusion. The LightRAG strategy builds a graph of
+entities and relations from the fragments and uses dual-level
+retrieval of specific and thematic information
+\cite{guo2024lightrag}. The GraphRAG strategy builds an entity graph
+with community summaries and searches the neighborhood of the query
+entities \cite{edge2024graphrag}; relation types, relation weights,
+and centrality mark concepts as core (candidates for tasks) or
+supporting (candidates for prerequisites, hints, or extensions).
+
+\item[Source-authority policy]
+Mandatory technical requirements, course tools, learning outcomes,
+and assessment criteria must be supported by the primary knowledge
+base. Supplementary evidence may support prerequisites, context,
+hints, and optional extensions, and never overrides a primary
+source.
+
+\item[Evidence validator]
+Runs deterministic checks first: output schema, required sections,
+and the validity of every source reference. It then classifies each
+substantive claim against its linked excerpts as supported,
+contradicted, or unsupported, using a versioned validation prompt
+(\texttt{validation\_version} in \texttt{evaluation\_runs}). A
+mandatory claim without supporting primary evidence produces the
+issue \texttt{MISSING\_PRIMARY\_EVIDENCE} and blocks the assignment.
+
+\item[Job runner]
+Wraps every RQ job. It sets the job to \texttt{running}, writes
+execution log events, stores the result, and converts exceptions into
+the \texttt{failed} state with an error code.
+
+\item[Evaluation runner]
+Executes every request of a frozen benchmark set with the
+configuration of an evaluation run: architecture, model identifiers,
+and prompt, output-schema, and validation versions. It records
+per-request results in the execution logs and stores aggregated
+metrics per category in \texttt{evaluation\_metrics}.
+
+\end{description}
+
+\subsubsection*{Class diagrams}
+
+Figure~\ref{fig:class-domain} shows the domain model. The classes
+correspond to the tables in Listing~\ref{lst:database-schema};
+attributes are shown without types. Figure~\ref{fig:class-services}
+shows the main service classes and the strategy pattern that makes
+the four retrieval architectures interchangeable.
+
+\begin{figure}[htbp]
+\centering
+% Scaled down only if wider than the text block; otherwise natural size.
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tikzpicture}[dg base]
+    % Row 1: course content
+    \node[dg class, anchor=north] (course) at (0,0)
+        {\textbf{Course}\nodepart{two}course\_id\\name};
+    \node[dg class, anchor=north] (kb) at (46mm,0)
+        {\textbf{KnowledgeBase}\nodepart{two}knowledge\_base\_role\\name};
+    \node[dg class, anchor=north] (doc) at (92mm,0)
+        {\textbf{SourceDocument}\nodepart{two}filename\\media\_type\\metadata\\ingestion\_status};
+    \node[dg class, anchor=north] (chunk) at (138mm,0)
+        {\textbf{DocumentChunk}\nodepart{two}chunk\_index\\content\\page\_number\\section\_path\\chroma\_record\_id};
+
+    % Row 2: generated assignments
+    \node[dg class, anchor=north] (asg) at (0,-40mm)
+        {\textbf{Assignment}\nodepart{two}mode\\status\\validation\_status\\retrieval\_architecture\\configuration};
+    \node[dg class, anchor=north] (sec) at (46mm,-40mm)
+        {\textbf{AssignmentSection}\nodepart{two}section\_key\\position\\content};
+    \node[dg class, anchor=north] (claim) at (92mm,-40mm)
+        {\textbf{GeneratedClaim}\nodepart{two}claim\_text\\claim\_type\\support\_status\\is\_mandatory};
+    \node[dg class, anchor=north] (ev) at (138mm,-40mm)
+        {\textbf{ClaimEvidence}\nodepart{two}relation};
+
+    % Row 3
+    \node[dg class, anchor=north] (user) at (0,-78mm)
+        {\textbf{User}\nodepart{two}email\\display\_name\\user\_role};
+
+    % Horizontal links, drawn 6 mm below the top edge of the boxes
+    \draw[dg comp] ($(course.north east)+(0,-6mm)$) --
+        node[pos=0.2, above, dg mult] {1}
+        node[pos=0.8, above, dg mult] {1..2} ($(kb.north west)+(0,-6mm)$);
+    \draw ($(kb.north east)+(0,-6mm)$) --
+        node[pos=0.2, above, dg mult] {1}
+        node[pos=0.8, above, dg mult] {0..*} ($(doc.north west)+(0,-6mm)$);
+    \draw[dg comp] ($(doc.north east)+(0,-6mm)$) --
+        node[pos=0.2, above, dg mult] {1}
+        node[pos=0.8, above, dg mult] {0..*} ($(chunk.north west)+(0,-6mm)$);
+    \draw[dg comp] ($(asg.north east)+(0,-6mm)$) --
+        node[pos=0.2, above, dg mult] {1}
+        node[pos=0.8, above, dg mult] {1..*} ($(sec.north west)+(0,-6mm)$);
+    \draw[dg comp] ($(sec.north east)+(0,-6mm)$) --
+        node[pos=0.2, above, dg mult] {1}
+        node[pos=0.8, above, dg mult] {0..*} ($(claim.north west)+(0,-6mm)$);
+    \draw[dg comp] ($(claim.north east)+(0,-6mm)$) --
+        node[pos=0.2, above, dg mult] {1}
+        node[pos=0.8, above, dg mult] {0..*} ($(ev.north west)+(0,-6mm)$);
+
+    % Vertical links
+    \draw (course.south) --
+        node[pos=0.12, right, dg mult] {1}
+        node[pos=0.88, right, dg mult] {0..*} (asg.north);
+    \draw (chunk.south) --
+        node[pos=0.12, right, dg mult] {1}
+        node[pos=0.88, right, dg mult] {0..*} (ev.north);
+    \draw (user.north) --
+        node[pos=0.15, right, dg mult] {1 (owner)}
+        node[pos=0.85, right, dg mult] {0..*} (asg.south);
+\end{tikzpicture}%
+}
+\caption{Class diagram of the domain model}
+\label{fig:class-domain}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+% Scaled down only if wider than the text block; otherwise natural size.
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tikzpicture}[dg base]
+    % Services
+    \node[dg class=40mm, anchor=north] (runner) at (0,0)
+        {\textbf{EvaluationRunner}\nodepart{two}run(run\_id)};
+    \node[dg class=40mm, anchor=north] (service) at (58mm,0)
+        {\textbf{AssignmentService}\nodepart{two}generate(configuration)\\regenerate\_section(id)\\revalidate(id)};
+    \node[dg class=40mm, anchor=north] (generator) at (116mm,0)
+        {\textbf{AssignmentGenerator}\nodepart{two}draft(configuration, evidence)\\redraft(section, evidence)};
+
+    % Interfaces
+    \node[dg class=40mm, anchor=north] (strategy) at (58mm,-34mm)
+        {\guil{interface}\\\textbf{RetrievalStrategy}\nodepart{two}build\_index(course\_id)\\retrieve(query, policy, top\_k)};
+    \node[dg class=40mm, anchor=north] (validator) at (116mm,-34mm)
+        {\guil{interface}\\\textbf{EvidenceValidator}\nodepart{two}validate(draft, evidence)};
+
+    % Strategy implementations
+    \node[dg class=33mm, anchor=north] (vec) at (0,-70mm)
+        {\textbf{VectorRetriever}\nodepart{two}Chroma similarity\\search};
+    \node[dg class=33mm, anchor=north] (hyb) at (39mm,-70mm)
+        {\textbf{HybridRetriever}\nodepart{two}BM25 and vector ranks,\\reciprocal rank fusion};
+    \node[dg class=33mm, anchor=north] (lrag) at (78mm,-70mm)
+        {\textbf{LightRAGRetriever}\nodepart{two}dual-level graph\\retrieval};
+    \node[dg class=33mm, anchor=north] (grag) at (117mm,-70mm)
+        {\textbf{GraphRAGRetriever}\nodepart{two}entity graph and\\community summaries};
+
+    % Dependencies
+    \draw[dg dep] ($(runner.north east)+(0,-6mm)$) --
+        ($(service.north west)+(0,-6mm)$);
+    \draw[dg dep] ($(service.north east)+(0,-6mm)$) --
+        ($(generator.north west)+(0,-6mm)$);
+    \draw[dg dep] (service.south) -- (strategy.north);
+    \draw[dg dep] (service.south east) -- (validator.north west);
+
+    % Realization of the strategy interface
+    \coordinate (bus) at (0,-62mm);
+    \foreach \impl in {vec, hyb, lrag, grag}
+        \draw[dashed] (\impl.north) -- (\impl.north |- bus);
+    \draw[dashed] (vec.north |- bus) -- (grag.north |- bus);
+    \draw[dg real] (strategy.south |- bus) -- (strategy.south);
+\end{tikzpicture}%
+}
+\caption{Class diagram of the assignment services and retrieval strategies}
+\label{fig:class-services}
+\end{figure}
+
+\subsubsection*{State diagrams}
+
+Figure~\ref{fig:states} shows the life cycle of an assignment and of
+a background job. An assignment is \texttt{complete} only when
+validation has passed and \texttt{incomplete} when validation is
+blocked; the database enforces both rules with check constraints.
+Editing a section reruns the deterministic checks immediately. Claims
+whose text has changed are set to \texttt{pending}, and a pending
+mandatory claim blocks validation until the section is regenerated,
+because regeneration runs the full validator in the worker. Export
+is permitted only in the \texttt{complete} state; otherwise the API
+returns \texttt{409 Conflict}. Source documents follow a similar life
+cycle: \texttt{queued}, \texttt{processing}, and then
+\texttt{indexed} or \texttt{failed}.
+
+\begin{figure}[htbp]
+\centering
+% Scaled down only if wider than the text block; otherwise natural size.
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tikzpicture}[dg base]
+    % (a) Assignment
+    \node[anchor=west, font=\fontsize{9}{10.5}\selectfont\bfseries]
+        at (-6mm,32mm) {(a) Assignment};
+    \node[dg initial] (a0) at (0,0) {};
+    \node[dg state] (gen) at (30mm,0) {generating};
+    \node[dg state] (comp) at (90mm,14mm) {complete};
+    \node[dg state] (inc) at (90mm,-14mm) {incomplete};
+    \node[dg state] (fail) at (2mm,-24mm) {failed};
+
+    \draw[dg flow] (a0) -- node[above, dg label] {generate} (gen);
+    \draw[dg flow] (gen.east) --
+        node[sloped, above, dg label] {\guard{checks passed}} (comp.west);
+    \draw[dg flow] (gen.east) --
+        node[sloped, below, dg label] {\guard{validation blocked}} (inc.west);
+    \draw[dg flow] (gen.south west) --
+        node[left, dg label] {\guard{job error}} (fail.north east);
+    \draw[dg flow] (inc.north) --
+        node[left, dg label, align=right] {section edited\\\guard{checks passed}}
+        (comp.south);
+    \draw[dg flow] (comp.east) to[bend left=50]
+        node[right, dg label, align=left] {section edited\\\guard{checks blocked}}
+        (inc.east);
+    \draw[dg flow] (comp.north) to[bend right=35]
+        node[above, dg label] {regenerate section} (gen.north);
+    \draw[dg flow] (inc.south) to[bend left=35]
+        node[below, dg label] {regenerate section} (gen.south);
+
+    % (b) Background job
+    \node[anchor=west, font=\fontsize{9}{10.5}\selectfont\bfseries]
+        at (-6mm,-42mm) {(b) Background job};
+    \node[dg initial] (b0) at (0,-55mm) {};
+    \node[dg state] (queued) at (25mm,-55mm) {queued};
+    \node[dg state] (running) at (68mm,-55mm) {running};
+    \node[dg state] (succ) at (112mm,-45mm) {succeeded};
+    \node[dg state] (bfail) at (112mm,-65mm) {failed};
+    \node[dg final] (f1) at (138mm,-45mm) {};
+    \node[dg final] (f2) at (138mm,-65mm) {};
+    \fill (f1.center) circle[radius=1.1mm];
+    \fill (f2.center) circle[radius=1.1mm];
+
+    \draw[dg flow] (b0) -- node[above, dg label] {enqueue} (queued);
+    \draw[dg flow] (queued) -- node[above, dg label] {dequeued} (running);
+    \draw[dg flow] (running.east) --
+        node[sloped, above, dg label] {result stored} (succ.west);
+    \draw[dg flow] (running.east) --
+        node[sloped, below, dg label] {error or timeout} (bfail.west);
+    \draw[dg flow] (succ) -- (f1);
+    \draw[dg flow] (bfail) -- (f2);
+\end{tikzpicture}%
+}
+\caption{State diagrams of an assignment and of a background job}
+\label{fig:states}
+\end{figure}
+
+\subsubsection*{Activity diagram}
+
+Figure~\ref{fig:activity-generation} shows how an assignment is
+generated. If the draft does not match the output schema, the
+generator retries a bounded number of times; if every attempt fails,
+the job ends in the \texttt{failed} state
+(Figure~\ref{fig:states}b).
+
+\begin{figure}[htbp]
+\centering
+% Scaled down only if wider than the text block; otherwise natural size.
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tikzpicture}[dg base]
+    \node[dg initial] (start) at (0,0) {};
+    \node[dg action, below=4mm of start] (a1)
+        {Validate the configuration and create a queued job (API)};
+    \node[dg action, below=4mm of a1] (a2)
+        {Retrieve evidence with the configured strategy (worker)};
+    \node[dg action, below=4mm of a2] (a3)
+        {Apply the source-authority policy to the candidates};
+    \node[dg decision, below=4mm of a3] (d1) {primary evidence\\found?};
+    \node[dg action, below=4mm of d1] (a4)
+        {Generate a draft constrained by the output schema};
+    \node[dg action, below=4mm of a4] (a5)
+        {Extract claims and link them to evidence fragments};
+    \node[dg action, below=4mm of a5] (a6)
+        {Classify claims as supported, contradicted, or unsupported};
+    \node[dg decision, below=4mm of a6] (d2) {all checks\\passed?};
+    \node[dg action, below=6mm of d2] (a7) {Mark the assignment complete};
+    \node[dg action=40mm, right=14mm of d2] (m)
+        {Mark the assignment incomplete and return validation issues};
+    \node[dg action, below=4mm of a7] (a8)
+        {Store sections, claims, evidence links, and execution logs};
+    \node[dg final, below=4mm of a8] (stop) {};
+    \fill (stop.center) circle[radius=1.1mm];
+
+    \draw[dg flow] (start) -- (a1);
+    \draw[dg flow] (a1) -- (a2);
+    \draw[dg flow] (a2) -- (a3);
+    \draw[dg flow] (a3) -- (d1);
+    \draw[dg flow] (d1) -- node[right, dg label] {\guard{yes}} (a4);
+    \draw[dg flow] (a4) -- (a5);
+    \draw[dg flow] (a5) -- (a6);
+    \draw[dg flow] (a6) -- (d2);
+    \draw[dg flow] (d2) -- node[right, dg label] {\guard{yes}} (a7);
+    \draw[dg flow] (a7) -- (a8);
+    \draw[dg flow] (a8) -- (stop);
+    \draw[dg flow] (d1.east) -|
+        node[pos=0.25, above, dg label] {\guard{no}} (m.north);
+    \draw[dg flow] (d2.east) -- node[above, dg label] {\guard{no}} (m.west);
+    \draw[dg flow] (m.south) |- (a8.east);
+\end{tikzpicture}%
+}
+\caption{Activity diagram of assignment generation}
+\label{fig:activity-generation}
+\end{figure}
+
+\subsubsection*{Event diagram}
+
+Figure~\ref{fig:sequence-generation} shows the messages exchanged
+while an assignment is generated, from the initial request to the
+retrieval of the result. Table~\ref{tab:events} lists the events that
+the system records. Events that belong to a background job are stored
+in \texttt{execution\_logs} with the job identifier. Events of
+synchronous API operations, such as section edits and exports, are
+written to the application log with the request identifier.
+
+\begin{figure}[htbp]
+\centering
+% Scaled down only if wider than the text block; otherwise natural size.
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tikzpicture}[dg base]
+    % Participants and lifelines
+    \foreach \x/\who in {0/Web client, 34/API, 58/Queue (Redis), 82/Worker,
+                         106/PostgreSQL, 130/Chroma, 154/OpenAI API} {
+        \node[dg box, minimum width=21mm, minimum height=7mm, font=\scriptsize]
+            at (\x*1mm, 0) {\who};
+        \draw[densely dashed, black!50] (\x*1mm, -3.5mm) -- (\x*1mm, -139mm);
+    }
+
+    % Generation request and background processing
+    \draw[dg msg] (0,-10mm) --
+        node[above, dg mlabel] {POST /generate} (34mm,-10mm);
+    \draw[dg msg] (34mm,-17mm) --
+        node[above, dg mlabel] {insert job (queued)} (106mm,-17mm);
+    \draw[dg async] (34mm,-24mm) --
+        node[above, dg mlabel] {enqueue job} (58mm,-24mm);
+    \draw[dg return] (34mm,-31mm) --
+        node[above, dg mlabel] {202 Accepted} (0,-31mm);
+    \draw[dg async] (58mm,-38mm) --
+        node[above, dg mlabel] {deliver job} (82mm,-38mm);
+    \draw[dg msg] (82mm,-45mm) --
+        node[above, dg mlabel] {job running} (106mm,-45mm);
+    \draw[dg msg] (82mm,-52mm) --
+        node[above, dg mlabel] {query vectors} (130mm,-52mm);
+    \draw[dg msg] (82mm,-59mm) --
+        node[above, dg mlabel] {read fragments} (106mm,-59mm);
+    \draw[dg msg] (82mm,-66mm) --
+        node[above, dg mlabel] {structured prompt} (154mm,-66mm);
+    \draw[dg return] (154mm,-73mm) --
+        node[above, dg mlabel] {JSON draft} (82mm,-73mm);
+    \draw[dg msg] (82mm,-80mm) -- (87mm,-80mm) -- (87mm,-84mm) -- (82.5mm,-84mm);
+    \node[dg mlabel, anchor=west] at (88mm,-82mm) {validate claims};
+    \draw[dg msg] (82mm,-91mm) --
+        node[above, dg mlabel] {store results} (106mm,-91mm);
+
+    % Polling loop
+    \draw (-12mm,-95mm) rectangle (112mm,-120mm);
+    \node[draw, anchor=north west, font=\scriptsize\bfseries,
+          inner sep=1.2pt, fill=white] at (-12mm,-95mm) {loop};
+    \node[dg mlabel, anchor=north west] at (-3mm,-95.8mm)
+        {\guard{until the job has finished}};
+    \draw[dg msg] (0,-102mm) --
+        node[above, dg mlabel] {GET /jobs/\{id\}} (34mm,-102mm);
+    \draw[dg msg] (34mm,-109mm) --
+        node[above, dg mlabel] {read job status} (106mm,-109mm);
+    \draw[dg return] (34mm,-116mm) --
+        node[above, dg mlabel] {200 OK (status)} (0,-116mm);
+
+    % Result
+    \draw[dg msg] (0,-127mm) --
+        node[above, dg mlabel] {GET /assignments/\{id\}} (34mm,-127mm);
+    \draw[dg return] (34mm,-134mm) --
+        node[above, dg mlabel] {200 OK (assignment)} (0,-134mm);
+\end{tikzpicture}%
+}
+\caption{Sequence (event) diagram of assignment generation}
+\label{fig:sequence-generation}
+\end{figure}
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{xltabular}{\textwidth}{
+    |p{46mm}|p{22mm}|X|
+}
+\hline
+\textbf{Event type} &
+\textbf{Producer} &
+\textbf{Recorded data and effect} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Event type} &
+\textbf{Producer} &
+\textbf{Recorded data and effect} \\
+\hline
+\endhead
+
+\multicolumn{3}{r}{\textit{Continued on the next page}} \\
+\endfoot
+
+\caption{Events recorded by the system}
+\label{tab:events} \\
+\endlastfoot
+
+\texttt{document.uploaded} &
+API &
+Document identifier, knowledge base, and media type; starts an
+ingestion job. \\
+\hline
+
+\texttt{ingestion.completed}, \texttt{ingestion.failed} &
+Worker &
+Number of fragments or error code; updates
+\texttt{ingestion\_status}. \\
+\hline
+
+\texttt{index.built} &
+Worker &
+Course, architecture, embedding model, and collection or artifact
+identifier. \\
+\hline
+
+\texttt{assignment.requested} &
+API &
+Configuration, mode, and retrieval architecture; starts a generation
+job. \\
+\hline
+
+\texttt{retrieval.completed} &
+Worker &
+Strategy, number of candidates per knowledge base, and latency. \\
+\hline
+
+\texttt{generation.completed} &
+Worker &
+Prompt version, model identifier, token usage, and latency. \\
+\hline
+
+\texttt{validation.passed}, \texttt{validation.blocked} &
+Worker, API &
+Validation status and issue codes; sets the assignment state. \\
+\hline
+
+\texttt{section.edited}, \texttt{section.regenerated} &
+API, Worker &
+Section identifier and the new validation result. \\
+\hline
+
+\texttt{assignment.exported} &
+API &
+Assignment identifier and export format. \\
+\hline
+
+\texttt{evaluation.started}, \texttt{evaluation.completed} &
+Worker &
+Run identifier, benchmark set, and aggregated metrics. \\
+\hline
+
+\texttt{job.failed} &
+Worker &
+Error code, message, and request identifier; sets the job to
+\texttt{failed}. \\
+\hline
+
+\end{xltabular}
+\endgroup
+
+% -------------------------------------------------
+% 6.5
+% -------------------------------------------------
 \subsection{User interface vision: schemes, plots, drawings}
+\label{sec:architecture-ui}
+
+The web client is a single-page application with role-specific
+navigation. Instructors see course materials and assignments,
+students see only their practice assignments, and researchers and
+administrators see the evaluation dashboard.
+Table~\ref{tab:ui-screens} lists the planned screens and the
+endpoints they use.
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{xltabular}{\textwidth}{
+    |p{26mm}|p{28mm}|X|p{42mm}|
+}
+\hline
+\textbf{Screen} &
+\textbf{Roles} &
+\textbf{Main elements} &
+\textbf{Endpoints} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Screen} &
+\textbf{Roles} &
+\textbf{Main elements} &
+\textbf{Endpoints} \\
+\hline
+\endhead
+
+\multicolumn{4}{r}{\textit{Continued on the next page}} \\
+\endfoot
+
+\caption{Planned screens of the web client}
+\label{tab:ui-screens} \\
+\endlastfoot
+
+Course materials &
+Instructor, administrator &
+Document list with knowledge-base, type, and status filters; upload
+dialog with a metadata form; ingestion status; course indexing. &
+\url{/documents}, \url{/documents/{document_id}/metadata},
+\url{/courses/{course_id}/index} \\
+\hline
+
+Assignment configuration &
+Instructor (official), student (practice) &
+Form for topic, learning outcomes, difficulty, course stage,
+competencies, duration, and format; generation progress. &
+\url{/assignments/generate}, \url{/jobs/{job_id}} \\
+\hline
+
+Assignment review &
+Instructor; student for own practice assignments &
+Section pane, evidence pane, validation banner and issue list;
+section editing and regeneration (instructor only); export. &
+\url{/assignments/{assignment_id}} with its \url{/sections} and
+\url{/export} sub-resources \\
+\hline
+
+Evaluation dashboard &
+Researcher, administrator &
+Run form (benchmark set, architecture), run list with status,
+metric charts, and a per-category table. &
+\url{/evaluation-runs}, \url{/evaluation-runs/{run_id}} \\
+\hline
+
+\end{xltabular}
+\endgroup
+
+Figure~\ref{fig:wireframe-review} shows the assignment review screen,
+the central screen of the application. Claims linked to evidence are
+marked in the text; selecting a claim shows its supporting excerpts
+with the source, knowledge base, and support status. The validation
+banner states whether the assignment is complete, and export stays
+disabled while it is incomplete. Figure~\ref{fig:wireframe-evaluation}
+shows the evaluation dashboard, which compares the retrieval
+architectures with Chart.js charts and lists the evaluation runs.
+
+\begin{figure}[htbp]
+\centering
+% Scaled down only if wider than the text block; otherwise natural size.
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tikzpicture}[
+    dg base,
+    wf text/.style={font=\scriptsize, anchor=west, inner sep=0pt},
+    wf head/.style={font=\scriptsize\bfseries, anchor=west, inner sep=0pt},
+    wf button/.style={
+        draw, rounded corners=1pt, font=\scriptsize,
+        inner sep=1.2pt, minimum height=4.5mm
+    },
+    wf badge/.style={draw, rounded corners=2pt, font=\tiny, inner sep=1pt},
+    wf line/.style={fill=black!12}
+]
+    % Window and navigation bar
+    \draw (0,0) rectangle (160mm,-100mm);
+    \fill[black!8] (0,0) rectangle (160mm,-9mm);
+    \draw (0,-9mm) -- (160mm,-9mm);
+    \node[wf head] at (3mm,-4.5mm) {RAG Lab Assignments};
+    \node[wf text] at (52mm,-4.5mm)
+        {Materials\qquad\textbf{Assignments}\qquad Evaluation};
+    \node[wf text, anchor=east] at (157mm,-4.5mm)
+        {Instructor\quad Operating Systems};
+
+    % Title, export, and validation banner
+    \node[font=\fontsize{9}{10.5}\selectfont\bfseries, anchor=west, inner sep=0pt]
+        at (4mm,-14mm) {Process Synchronization};
+    \node[wf button, anchor=east] at (156mm,-14mm)
+        {Export: Markdown \textbar{} PDF};
+    \draw[fill=black!4] (4mm,-18mm) rectangle (156mm,-24mm);
+    \node[wf text] at (6mm,-21mm)
+        {\textbf{Complete} --- all mandatory requirements are supported by primary sources};
+
+    % Left pane: assignment sections
+    \draw (4mm,-27mm) rectangle (98mm,-96mm);
+    \node[wf head] at (7mm,-31mm) {Prerequisites};
+    \fill[wf line] (7mm,-34.2mm) rectangle (70mm,-35.8mm);
+    \node[wf head] at (7mm,-40mm) {Objectives};
+    \fill[wf line] (7mm,-43.2mm) rectangle (80mm,-44.8mm);
+    \node[wf head] at (7mm,-49mm) {Environment and tools};
+    \fill[wf line] (7mm,-52.2mm) rectangle (60mm,-53.8mm);
+    \node[wf head] at (7mm,-58mm) {Task 1: Analyze a race condition};
+    \node[wf button, anchor=east] at (85mm,-58mm) {Regenerate};
+    \node[wf button, anchor=east] at (95mm,-58mm) {Edit};
+    \fill[wf line] (7mm,-61.2mm) rectangle (90mm,-62.8mm);
+    \fill[wf line] (7mm,-65.2mm) rectangle (40mm,-66.8mm);
+    \draw[thick] (41mm,-64.6mm) rectangle (76mm,-67.4mm);
+    \fill[black!25] (42mm,-65.2mm) rectangle (75mm,-66.8mm);
+    \node[font=\tiny, anchor=west, inner sep=0pt] at (77mm,-66mm) {\guard{1}};
+    \node[wf head] at (7mm,-72mm) {Submission requirements};
+    \fill[wf line] (7mm,-75.2mm) rectangle (65mm,-76.8mm);
+    \node[wf head] at (7mm,-81mm) {Assessment rubric};
+    \draw (7mm,-84mm) rectangle (95mm,-93mm);
+    \draw (7mm,-87mm) -- (95mm,-87mm);
+    \draw (50mm,-84mm) -- (50mm,-93mm);
+    \draw (80mm,-84mm) -- (80mm,-93mm);
+    \node[wf text] at (9mm,-85.5mm) {Criterion};
+    \node[wf text] at (52mm,-85.5mm) {Description};
+    \node[wf text] at (82mm,-85.5mm) {Weight};
+    \fill[wf line] (9mm,-90.8mm) rectangle (35mm,-89.2mm);
+    \fill[wf line] (52mm,-90.8mm) rectangle (76mm,-89.2mm);
+    \fill[wf line] (82mm,-90.8mm) rectangle (88mm,-89.2mm);
+
+    % Right pane: evidence for the selected claim
+    \draw (101mm,-27mm) rectangle (156mm,-96mm);
+    \node[wf head] at (104mm,-31mm) {Evidence for claim \guard{1}};
+    \draw[rounded corners=1pt] (104mm,-34mm) rectangle (153mm,-62mm);
+    \node[wf text] at (106mm,-37.5mm) {Lecture 5 (PDF, p.~12)};
+    \node[wf badge, anchor=west] at (106mm,-42mm) {primary};
+    \node[wf badge, anchor=west] at (120mm,-42mm) {supported};
+    \fill[wf line] (106mm,-46.2mm) rectangle (150mm,-47.8mm);
+    \fill[wf line] (106mm,-50.2mm) rectangle (148mm,-51.8mm);
+    \fill[wf line] (106mm,-54.2mm) rectangle (150mm,-55.8mm);
+    \fill[wf line] (106mm,-58.2mm) rectangle (130mm,-59.8mm);
+    \draw[rounded corners=1pt] (104mm,-65mm) rectangle (153mm,-85mm);
+    \node[wf text] at (106mm,-68.5mm) {Lab guide (Markdown)};
+    \node[wf badge, anchor=west] at (106mm,-73mm) {supplementary};
+    \node[wf badge, anchor=west] at (127mm,-73mm) {context};
+    \fill[wf line] (106mm,-77.2mm) rectangle (150mm,-78.8mm);
+    \fill[wf line] (106mm,-81.2mm) rectangle (138mm,-82.8mm);
+    \node[wf text, text=black!60] at (104mm,-90mm)
+        {Excerpts link to the source document};
+\end{tikzpicture}%
+}
+\caption{Wireframe of the assignment review screen (instructor view)}
+\label{fig:wireframe-review}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+% Scaled down only if wider than the text block; otherwise natural size.
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+\begin{tikzpicture}[
+    dg base,
+    wf text/.style={font=\scriptsize, anchor=west, inner sep=0pt},
+    wf head/.style={font=\scriptsize\bfseries, anchor=west, inner sep=0pt},
+    wf button/.style={
+        draw, rounded corners=1pt, font=\scriptsize,
+        inner sep=1.2pt, minimum height=4.5mm
+    },
+    wf line/.style={fill=black!12}
+]
+    % Window and navigation bar
+    \draw (0,0) rectangle (160mm,-92mm);
+    \fill[black!8] (0,0) rectangle (160mm,-9mm);
+    \draw (0,-9mm) -- (160mm,-9mm);
+    \node[wf head] at (3mm,-4.5mm) {RAG Lab Assignments};
+    \node[wf text] at (52mm,-4.5mm)
+        {Materials\qquad Assignments\qquad\textbf{Evaluation}};
+    \node[wf text, anchor=east] at (157mm,-4.5mm)
+        {Researcher\quad Operating Systems};
+
+    % Run controls
+    \node[wf text] at (4mm,-14mm) {Benchmark set};
+    \draw (25mm,-11.5mm) rectangle (60mm,-16.5mm);
+    \node[wf text] at (27mm,-14mm) {OS held-out, v1};
+    \node[wf text] at (66mm,-14mm) {Architecture};
+    \draw (85mm,-11.5mm) rectangle (115mm,-16.5mm);
+    \node[wf text] at (87mm,-14mm) {GraphRAG};
+    \node[wf button, anchor=east] at (156mm,-14mm) {Start evaluation run};
+
+    % Chart 1: quality metrics, grouped by architecture
+    \draw (4mm,-20mm) rectangle (98mm,-62mm);
+    \node[wf head] at (7mm,-24mm) {Quality by architecture};
+    \foreach \x/\lbl/\tone in {44/vector/80, 55/hybrid/55,
+                               66/LightRAG/35, 80/GraphRAG/15} {
+        \filldraw[fill=black!\tone, draw=black!60]
+            (\x*1mm,-25.2mm) rectangle (\x*1mm+2.5mm,-22.8mm);
+        \node[font=\tiny, anchor=west, inner sep=0pt]
+            at (\x*1mm+3.3mm,-24mm) {\lbl};
+    }
+    \draw[->] (12mm,-55mm) -- (94mm,-55mm);
+    \draw[->] (12mm,-55mm) -- (12mm,-29mm);
+    \foreach \x/\lbl in {24/Relevance, 44/Traceability,
+                         64/Correctness, 84/LO alignment}
+        \node[font=\tiny] at (\x*1mm,-58mm) {\lbl};
+    \node[font=\scriptsize, text=black!55, align=center] at (53mm,-42mm)
+        {grouped bars: one bar per\\architecture and metric};
+
+    % Chart 2: latency and estimated cost
+    \draw (101mm,-20mm) rectangle (156mm,-62mm);
+    \node[wf head] at (104mm,-24mm) {Latency and estimated cost};
+    \draw[->] (110mm,-55mm) -- (152mm,-55mm);
+    \draw[->] (110mm,-55mm) -- (110mm,-29mm);
+    \node[font=\tiny, anchor=north] at (131mm,-56mm)
+        {estimated cost per request};
+    \node[font=\tiny, rotate=90, anchor=south] at (109mm,-42mm)
+        {latency (s)};
+    \node[font=\scriptsize, text=black!55, align=center] at (131mm,-42mm)
+        {one point per\\architecture};
+
+    % Evaluation runs
+    \draw (4mm,-66mm) rectangle (156mm,-88mm);
+    \fill[black!6] (4mm,-66mm) rectangle (156mm,-71mm);
+    \draw (4mm,-71mm) -- (156mm,-71mm);
+    \foreach \x/\lbl in {6/Run, 30/Architecture, 62/Benchmark set,
+                         100/Status, 128/Started}
+        \node[wf head] at (\x*1mm,-68.5mm) {\lbl};
+    \fill[wf line] (6mm,-76.3mm) rectangle (22mm,-74.7mm);
+    \node[wf text] at (30mm,-75.5mm) {hybrid};
+    \node[wf text] at (62mm,-75.5mm) {OS held-out, v1};
+    \node[wf text] at (100mm,-75.5mm) {succeeded};
+    \fill[wf line] (128mm,-76.3mm) rectangle (150mm,-74.7mm);
+    \draw[black!20] (4mm,-79mm) -- (156mm,-79mm);
+    \fill[wf line] (6mm,-82.8mm) rectangle (22mm,-81.2mm);
+    \node[wf text] at (30mm,-82mm) {GraphRAG};
+    \node[wf text] at (62mm,-82mm) {OS held-out, v1};
+    \node[wf text] at (100mm,-82mm) {running};
+    \fill[wf line] (128mm,-82.8mm) rectangle (150mm,-81.2mm);
+\end{tikzpicture}%
+}
+\caption{Wireframe of the evaluation dashboard (researcher view). The
+chart areas show the planned layout only and contain no results.}
+\label{fig:wireframe-evaluation}
+\end{figure}
+
+The interface follows these principles:
+
+\begin{itemize}
+    \item Evidence is shown next to the content it supports, not on a
+    separate page.
+
+    \item States such as complete, incomplete, running, and failed are
+    shown as text, not by color alone.
+
+    \item Long-running operations show the job state and do not block
+    the interface.
+
+    \item Every chart has a table view with the same values, and all
+    controls can be operated with the keyboard
+    (Section~\ref{sec:architecture-external}).
+
+    \item Students cannot reach screens or actions that modify course
+    materials or official assignments; the API enforces the same
+    rule.
+\end{itemize}
+
+% -------------------------------------------------
+% 6.6
+% -------------------------------------------------
 \subsection{External interfaces: standards, file formats, norms}
+\label{sec:architecture-external}
+
+The application exchanges data with web browsers, the OpenAI API, and
+the file system of the lab host. Table~\ref{tab:external-interfaces}
+lists the standards, formats, and norms that these interfaces
+follow.
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{xltabular}{\textwidth}{
+    |p{30mm}|p{55mm}|X|
+}
+\hline
+\textbf{Area} &
+\textbf{Standard, format, or norm} &
+\textbf{Use in the system} \\
+\hline
+\endfirsthead
+
+\hline
+\textbf{Area} &
+\textbf{Standard, format, or norm} &
+\textbf{Use in the system} \\
+\hline
+\endhead
+
+\multicolumn{3}{r}{\textit{Continued on the next page}} \\
+\endfoot
+
+\caption{External interfaces, standards, and formats}
+\label{tab:external-interfaces} \\
+\endlastfoot
+
+HTTP API &
+HTTP Semantics (RFC~9110), HTTP/1.1 (RFC~9112) &
+Resource-oriented endpoints under \texttt{/api/v1} with standard
+methods and status codes (Section~\ref{sec:api-contracts}). \\
+\hline
+
+Transport security &
+TLS 1.2 or 1.3 (RFC~8446) &
+HTTPS for remote access to the API and for calls to the OpenAI
+API. \\
+\hline
+
+API description &
+OpenAPI Specification 3.1; Swagger UI; ReDoc &
+Machine-readable contract generated by FastAPI at
+\texttt{/openapi.json}. \\
+\hline
+
+Data interchange &
+JSON (RFC~8259), UTF-8 (RFC~3629), JSON Schema 2020-12 &
+Request and response bodies; the output schema of generated
+assignments and of structured model output. \\
+\hline
+
+Identifiers and time &
+UUID (RFC~9562); timestamps in RFC~3339 format, in UTC &
+Resource identifiers; timestamps in API responses and logs. \\
+\hline
+
+Authentication &
+Bearer token usage (RFC~6750) &
+\texttt{Authorization: Bearer} header on protected endpoints;
+role-based authorization. \\
+\hline
+
+File upload &
+\texttt{multipart/form-data} (RFC~7578); IANA media types &
+Document upload with a JSON metadata part; media-type validation
+(\texttt{415} for unsupported types). \\
+\hline
+
+Source document formats &
+PDF (ISO~32000-2), HTML (WHATWG HTML Living Standard), plain text in
+UTF-8, Markdown (CommonMark 0.31.2; \texttt{text/markdown},
+RFC~7763) &
+Accepted ingestion formats (FR-01). \\
+\hline
+
+Export formats &
+Markdown (CommonMark), PDF &
+Assignment export (FR-11). \\
+\hline
+
+External model service &
+OpenAI API (REST over HTTPS, JSON) &
+Generation and embeddings with configured model identifiers; usage
+recorded per call. \\
+\hline
+
+Database &
+SQL (ISO/IEC~9075) as implemented by PostgreSQL; JSONB &
+Relational schema (Section~\ref{sec:database-schema}); semi-structured
+metadata and configurations. \\
+\hline
+
+Deployment &
+OCI image format (Docker); Compose Specification &
+Container images and the multi-service deployment. \\
+\hline
+
+Accessibility &
+WCAG 2.1, Level AA &
+Keyboard operation, sufficient contrast, table alternatives for
+charts, and states not conveyed by color alone. \\
+\hline
+
+Personal data &
+GDPR (Regulation (EU) 2016/679) &
+User accounts store only the data needed for access control (e-mail,
+display name, role); requests to the model provider contain course
+excerpts and assignment configurations, not user data. \\
+\hline
+
+Course materials &
+Copyright and license terms of the sources &
+Only permitted materials are ingested, according to the documented
+inclusion rules (Section~\ref{sec:specification}). \\
+\hline
+
+Code and versioning &
+PEP~8; Semantic Versioning 2.0.0 &
+Code style enforced by the code-quality checks in CI; the API version
+prefix and versioned prompts, output schemas, and validation
+rules. \\
+\hline
+
+\end{xltabular}
+\endgroup
+
+\clearpage
 
 \section{Justification of Technology Stack Choice}
 \label{sec:technology-stack}
@@ -1731,7 +3232,7 @@ aggregated evaluation metrics. Returns \texttt{200 OK}. \\
 \end{xltabular}
 \endgroup
 
-\subsection*{Document upload request}
+\subsection{Document upload request}
 
 The \texttt{POST /api/v1/documents} request uses
 \texttt{multipart/form-data}. The \texttt{file} part contains the
@@ -1764,7 +3265,7 @@ The response is \texttt{202 Accepted}:
 }
 \end{lstlisting}
 
-\subsection*{Assignment generation request}
+\subsection{Assignment generation request}
 
 The \texttt{POST /api/v1/assignments/generate} request accepts the
 pedagogical configuration required by the assignment specification:
@@ -1803,7 +3304,7 @@ Missing, contradicted, or unsupported evidence is returned as a
 structured validation issue and the assignment is marked
 \texttt{incomplete}.
 
-\subsection*{Assignment and validation response}
+\subsection{Assignment and validation response}
 
 The \texttt{GET /api/v1/assignments/\{assignment\_id\}} response
 includes the required assignment sections and evidence links. Each
@@ -1888,7 +3389,7 @@ assignment. For example:
 }
 \end{lstlisting}
 
-\subsection*{Error responses}
+\subsection{Error responses}
 
 Errors use a consistent JSON envelope containing a stable error
 code, a human-readable message, and optional field or evidence

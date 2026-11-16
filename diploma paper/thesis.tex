@@ -453,14 +453,67 @@ Abstention is therefore a necessary RAG behavior. When required evidence is miss
 In conclusion, LLMs can generate coherent text but cannot serve as reliable authorities for course-specific content without external grounding. RAG provides a framework for combining generation with retrieval from controlled knowledge sources. Lexical, dense, sparse, late-interaction, hybrid, graph-based, hierarchical, adaptive, agentic, and multimodal approaches offer different ways of representing and retrieving information. Their suitability depends on the corpus, task, source policies, evidence requirements, and operational constraints. Chapter~2 presents the methodological principles for corpus preparation, knowledge-base separation, benchmark design, retrieval and generation evaluation, claim validation, reproducibility, and multi-criteria architecture selection.
 
 % =================================================
-% Placeholders for Chapters 2--4 and the Summary.
-% Replace these concise placeholders with the final chapters.
+% Chapters 2--4 and the Summary.
 % =================================================
 \chapter{Principles of Corpus Preparation and Evaluation for RAG Systems}
 \section{Corpus Boundaries, Source Authority, and Knowledge-Base Separation}
-\textit{To be completed. This chapter will define generic principles for controlled corpora, primary and supplementary source roles, document processing, benchmark construction, evaluation, validation, reproducibility, and architecture-selection criteria.}
+
+A RAG system can only retrieve evidence that is represented in its searchable collection. Consequently, corpus preparation determines not only which topics can be addressed, but also which statements the system can justify. In laboratory assignment generation, a technically plausible exercise may still be inappropriate if its required tools, assumed knowledge, or assessment criteria are absent from the approved course materials. Corpus quality must therefore be considered in terms of scope, authority, completeness, and traceability rather than document quantity alone.
+
+\par\medskip
+\textbf{Defining a Controlled Corpus}
+
+A closed corpus is a deliberately bounded collection of approved sources. Its inclusion rules should specify the target course, relevant editions or academic periods, permitted document types, and conditions of use. Suitable candidates may include course syllabi, laboratory instructions, lecture notes, and approved technical documentation. Exclusion rules should identify obsolete versions, unrelated material, documents without permission for the intended processing, and sources whose origin or applicability cannot be established. Public availability alone does not establish permission to reuse a document.
+
+The corpus boundary also defines the system's information-access policy. For the application considered in this thesis, retrieval is restricted to approved local knowledge bases and does not include web search. This restriction does not remove knowledge encoded in the generation model; rather, it limits what may be accepted as evidence. Model knowledge can assist formulation, but it cannot replace an approved source when justifying a technical claim or mandatory requirement. If the collection does not provide sufficient evidence, the appropriate outcome is an explicit statement of insufficiency rather than an invented requirement.
+
+Corpus preparation should produce a manifest recording source identifiers, versions, origins, inclusion decisions, and known limitations. Once the collection is finalized, a reproducible snapshot should be established before the held-out benchmark is defined and the compared architectures are implemented or tuned. Subsequent changes require a new corpus version and a documented assessment of their effect on evaluation comparability.
+
+\par\medskip
+\textbf{Source Authority and Knowledge-Base Roles}
+
+Relevance and authority are distinct properties. A passage may closely match a request while describing a different course, software version, or optional technique. Retrieval similarity therefore cannot determine whether a source is entitled to define a mandatory task. Authority should be assigned through an explicit policy that considers the source's role, course applicability, version, and scope.
+
+Separating primary and supplementary knowledge bases makes this policy operational. The primary knowledge base contains authoritative materials for the target course. Mandatory technical requirements, course-specific tools, learning outcomes, and assessment criteria must be supported by this collection. The supplementary knowledge base contains approved materials from related or earlier courses. It may support prerequisites, contextual explanations, hints, and optional extensions, but it must not override primary-course materials or independently establish mandatory requirements. Separation may be physical or logical, provided that source roles remain enforceable during retrieval, generation, and validation.
+
+For example, supplementary programming notes may explain a synchronization primitive without authorizing its use as a compulsory implementation technique. Likewise, a frequently retrieved supplementary document does not become authoritative merely because it contains more detail. These distinctions must remain visible in the evidence supplied to the model and in the final claim-to-source links.
+
+\par\medskip
+\textbf{Conflicts and Coverage Limitations}
+
+Differences between documents should first be examined for differences in version, scope, or intended audience. An approved policy may identify an applicable primary version, but unresolved contradictions must not be silently merged. If a conflict affects a mandatory requirement, the system should return a structured explanation instead of presenting a complete assignment.
+
+Corpus coverage should also be reviewed against the intended topics, learning outcomes, difficulty levels, and course stages. Missing coverage is a limitation to report, not a reason to admit unapproved sources. These boundaries establish which requests can be answered responsibly and provide the basis for evaluating unsupported and conflicting-source cases.
+
 \section{Document Processing, Metadata, Segmentation, and Indexing}
-\textit{To be completed.}
+
+Document ingestion transforms approved files into searchable representations while preserving a verifiable connection to their original content. In a RAG pipeline, retrieval supplies the context from which the model constructs its response \cite{Lewis2020}; errors introduced before retrieval can therefore affect every subsequent stage. The processing workflow should distinguish original files, extracted text, searchable fragments, and derived indexes, rather than treating an embedding or generated summary as the source itself.
+
+\par\medskip
+\textbf{Extraction and Metadata}
+
+PDF, HTML, TXT, and Markdown require different extraction procedures. PDF extraction may disrupt reading order, code indentation, or table structure; scanned pages may require optical character recognition. HTML processing should separate instructional content from navigation and other page elements. Plain-text and Markdown processing should preserve headings, lists, code blocks, and meaningful whitespace. Cleaning should remove irrelevant artifacts without deleting qualifications, command options, or conditions that change technical meaning.
+
+Extraction quality should be checked before indexing. Empty output, unreadable content, or damaged structure should produce an explicit processing status requiring correction or review, not a searchable document that appears complete. The original file should remain available for inspection, and extracted passages should retain available location information, such as a page number, heading path, or text offset. When reliable location information cannot be recovered, that limitation should be recorded rather than replaced with a fabricated reference.
+
+Metadata provides the context required to interpret and filter extracted content. Each document needs a stable identifier and a declared knowledge-base role. Course, document type, topic, version, learning outcomes, difficulty level, and authority level should be recorded where available. Unknown values should remain explicitly unknown; inferred annotations should not be presented as confirmed source properties. Fragments inherit relevant document metadata and receive their own identifiers and location references. Document versions must remain distinguishable so that an earlier generated assignment can still be traced to the evidence used at generation time.
+
+\par\medskip
+\textbf{Segmentation and Evidence Units}
+
+Segmentation divides extracted text into units suitable for retrieval and model context limits. Very small fragments can separate a requirement from its explanation or precondition, whereas very large fragments can dilute relevance and consume the context budget. A suitable strategy should respect document structure, keeping coherent paragraphs, procedures, and code examples together where practical. Limited overlap may preserve context across boundaries, but repeated passages should not be mistaken for independent supporting sources.
+
+Every indexed fragment must retain a source-document identifier and a retrievable text excerpt. Additional surrounding text can help interpret a short match, but any expansion should remain linked to the original location. Chunk size and overlap should be documented and selected using development material, not the held-out benchmark. Different segmentation choices can change both retrieval relevance and apparent evidence coverage, making them important experimental controls.
+
+\par\medskip
+\textbf{Indexes, Provenance, and Comparability}
+
+An index is a derived search structure. Lexical indexes represent terms, vector indexes represent embedded text, and graph-based approaches add entities, relationships, or summaries \cite{Guo2024,Edge2024}. These representations should refer back to the same approved source collection. Graph edges and community summaries require particular care because extraction and summarization may introduce interpretations not directly stated in the documents. They can guide retrieval, but substantive claims must remain verifiable against original excerpts.
+
+Source-role and course filters should constrain the eligible evidence independently of similarity scores. Updating, replacing, or withdrawing a document must trigger corresponding updates to its fragments and derived indexes; otherwise, stale content may remain retrievable. Processing records should identify the corpus version, extraction and segmentation settings, embedding model, and index configuration used.
+
+For a controlled architecture comparison, the corpus, metadata policy, embedding model, and retrieved-context budget should remain constant unless a variation is explicitly documented as an experimental factor. Architecture-specific graph construction and other unavoidable differences must also be recorded. This preserves a common evidence foundation while allowing retrieval strategies to differ, so that later evaluation can distinguish retrieval effects from changes in source preparation.
+
 \section{Benchmark Design and Evaluation Measures}
 \textit{To be completed.}
 \section{Claim Validation, Reproducibility, and Architecture-Selection Criteria}
